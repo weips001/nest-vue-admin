@@ -77,10 +77,15 @@ export class AuthService {
         generateRedisKey(REDIS_KEYS.CAPTCHA, captchaId),
       );
     }
+    const captchaConfig = this.configService.get<{
+      size: number;
+      width: number;
+      height: number;
+    }>('captcha')!;
     const captcha = svgCaptcha.createMathExpr({
-      size: 4, // 验证码长度
-      width: 200, // 宽度
-      height: 40, // 高度
+      size: captchaConfig.size, // 验证码长度
+      width: captchaConfig.width, // 宽度
+      height: captchaConfig.height, // 高度
       noise: 3, // 验证码干扰线数量
       color: true, // 验证码颜色
       ignoreChars: '0o1i', // 验证码中排除的 字符集合

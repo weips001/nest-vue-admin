@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "dev": "nest start --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start --debug",
     "start:dev": "nest start --watch",
@@ -21,6 +22,7 @@
     "db:m": "prisma migrate dev --name init",
     "db:g": "prisma generate",
     "db:s": "prisma studio",
+    "db:d": "prisma migrate deploy",
     "seed": "tsx prisma/seed/index.ts"
   },
   "dependencies": {

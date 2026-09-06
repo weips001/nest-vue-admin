@@ -2,6 +2,37 @@
 
 只需三步，即可在本地启动 `Nest Vue Admin`。
 
+## 🚀 本地开发最短路径
+
+如果你只想尽快把项目跑起来，按下面顺序执行即可：
+
+```bash
+# 1. 安装依赖
+pnpm i
+
+# 2. 复制服务端环境变量
+cp apps/server/.env.example apps/server/.env
+
+# 3. 创建 MySQL 数据库（名称需与 DATABASE_URL 一致）
+# 例如：nva
+
+# 4. 初始化数据库结构和种子数据
+cd apps/server
+pnpm run db:m
+pnpm run seed
+cd ../..
+
+# 5. 回到根目录启动前后端
+pnpm run dev
+```
+
+启动后访问 `http://localhost:5173`，默认账号 `admin / 123456`。
+
+最小依赖说明：
+- 默认 `CACHE_MODE=memory`，本地首次启动不依赖 Redis
+- 后端默认端口 `3333`
+- 前端默认端口 `5173`
+
 ## 📦 开发环境配置
 
 ### 环境要求
@@ -26,14 +57,14 @@ pnpm i
 3. 将 `DATABASE_URL` 修改为你的实际连接信息：
 
 ```bash
-DATABASE_URL="mysql://root:Aa123456@127.0.0.1:3306/nest-vue-admin?connection_limit=20&pool_timeout=0"
+DATABASE_URL="mysql://root:password@127.0.0.1:3306/nva?connection_limit=20&pool_timeout=0"
 ```
 **参数解析：**
 
 - **用户名**: `root`
-- **密码**: `Aa123456`
+- **密码**: `password`
 - **地址/端口**: `127.0.0.1:3306`
-- **数据库名**: `nest-vue-admin`
+- **数据库名**: `nva`
 
 > **✅ 如何验证：**
 > 使用 Navicat、TablePlus 或 DBeaver 尝试连接该配置。如果能成功连接到 MySQL 并看到对应的空库（即使没有表），说明连接链条已通。
@@ -60,21 +91,27 @@ pnpm run seed
 
 ## 3. 项目启动
 
-### 3.1 服务端启动
+### 3.1 使用根目录统一命令启动
 ```bash
-cd apps/server
-
-pnpm run start
+pnpm run dev
 ```
-后端服务将在 `http://localhost:3000` 启动。
 
-### 3.2 前端启动
+- 前端服务默认运行在 `http://localhost:5173`
+- 后端服务默认运行在 `http://127.0.0.1:3333`
+
+> 前端开发代理默认转发到 `http://127.0.0.1:3333`，请确保 `apps/server/.env` 中的 `APP_PORT` 与此保持一致。
+
+### 3.2 常用根目录命令
 ```bash
-cd apps/web 
-
-pnpm run start
+pnpm run start   # 并行启动前后端
+pnpm run build   # 构建 server 和 web
+pnpm run lint    # 执行 server 和 web 的 lint
+pnpm run test    # 执行 server 和 web 的测试
 ```
-前端服务将在 `http://localhost:5173` 启动。
+
+## 🚧 生产部署
+
+生产部署前请先阅读 [docs/deployment.md](docs/deployment.md)，其中包含默认密码、`JWT_SECRET`、CORS、Redis、上传目录和反向代理等生产环境注意事项。
 
 ## 👤 登录系统
 

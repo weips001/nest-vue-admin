@@ -18,17 +18,24 @@ export const useUserStore = defineStore('user', () => {
     currentUser.value = res.data
   }
   const menus = ref<MenuListType[]>([])
+  const routesInitialized = ref(false)
 
   const renderRoutes = async () => {
+    if (routesInitialized.value) {
+      return menus.value.length > 0
+    }
+
     const res = await getRoutesApi()
     menus.value = res.data
 
     // 没有菜单权限返回 false
     if (!menus.value || menus.value.length === 0) {
+      routesInitialized.value = true
       return false
     }
 
     addRouter()
+    routesInitialized.value = true
     return true
   }
 
@@ -72,6 +79,7 @@ export const useUserStore = defineStore('user', () => {
       router.removeRoute(name)
     })
     addedRouteNames.value = []
+    routesInitialized.value = false
     // 清除状态
     currentUser.value = undefined
     menus.value = []

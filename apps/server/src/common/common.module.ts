@@ -2,6 +2,7 @@ import { Global, Logger, Module, OnModuleInit, ValidationPipe } from '@nestjs/co
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { CacheModeEnum } from '@/common/enums/config.enum';
+import { createCacheModuleOptions } from '@/common/cache/cache-options.factory';
 import { ExcelExportService } from '@/common/class/export.class';
 import { HttpExceptionFilter } from '@/common/filters/exception.filter';
 import { DemoEnvironmentGuard } from '@/common/guards/demo.guard';
@@ -15,7 +16,6 @@ import {
 } from '@/common/types/config.type';
 import { getConfig } from '@/config/config';
 import { envValidationSchema } from '@/config/config.validation';
-import KeyvRedis from '@keyv/redis';
 import { CacheModule } from '@nestjs/cache-manager';
 import {
   APP_FILTER,
@@ -28,8 +28,6 @@ import {
   ThrottlerGuard,
   ThrottlerModule,
 } from '@nestjs/throttler';
-import { CacheableMemory } from 'cacheable';
-import Keyv, { KeyvStoreAdapter } from 'keyv';
 import { PrismaModule, PrismaService } from 'nestjs-prisma';
 import { PermissionGuard } from './guards/permission.guard';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
@@ -76,56 +74,22 @@ const logger = new Logger('CacheModule');
     }),
     CacheModule.registerAsync({
       useFactory: async (configService: ConfigService) => {
-        const stores: (KeyvStoreAdapter | Keyv)[] = [];
         const cacheConfig = configService.get<CacheConfigType>('cache')!;
 
         if (cacheConfig.mode === CacheModeEnum.REDIS) {
           const redisConfig = configService.get<RedisConfigType>('redis')!;
-          const { host, port, password, username, database } = redisConfig;
-          const redisStore = new KeyvRedis(
-            {
-              socket: {
-                host,
-                port,
-                reconnectStrategy: (retries: number) => {
-                  if (retries > 5) {
-                    throw new Error('Redis connection failed');
-                  }
-                  return 1000;
-                },
-              },
-              username,
-              password,
-              database,
-            },
-            {
-              throwOnConnectError: true,
-              throwOnErrors: true,
-              connectionTimeout: 3000,
-            },
-          );
-          const client = redisStore.client;
-          client
-            .connect()
-            .then(() => {
-              logger.log('Redis connected successfully');
-            })
-            .catch((error) => {
-              logger.error('Redis connection failed:', error);
-            });
-          stores.push(redisStore);
-        } else {
-          const memoryStore = new Keyv({
-            store: new CacheableMemory({ ttl: 60000, lruSize: 5000 }),
+          const options = await createCacheModuleOptions({
+            cache: cacheConfig,
+            redis: redisConfig,
           });
+          logger.log('Redis connected successfully');
+          return options;
+        } else {
           logger.log('Cache is using Memory Cache');
-          stores.push(memoryStore);
+          return await createCacheModuleOptions({
+            cache: cacheConfig,
+          });
         }
-
-        return {
-          stores,
-          ttl: cacheConfig.ttl,
-        };
       },
       isGlobal: true,
       inject: [ConfigService],
@@ -137,6 +101,7 @@ const logger = new Logger('CacheModule');
       provide: APP_PIPE,
       useValue: new ValidationPipe({
         whitelist: true,
+        forbidNonWhitelisted: true,
         transform: true,
       }),
     },

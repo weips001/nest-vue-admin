@@ -32,7 +32,7 @@ const handleSwitch = (mode: string) => {
           :command="item.mode"
           :class="{ 'is-active': layoutMode === item.mode }"
         >
-          <Icon :icon="item.icon" :size="14" style="margin-right: 6px" />
+          <Icon :icon="item.icon" :size="14" class="layout-option-icon" />
           {{ item.label }}
           <el-icon v-if="layoutMode === item.mode" class="check-icon"><Check /></el-icon>
         </el-dropdown-item>
@@ -55,6 +55,11 @@ const handleSwitch = (mode: string) => {
     .check-icon {
       margin-left: auto;
       color: var(--el-color-primary);
+    }
+
+    .layout-option-icon {
+      margin-right: 6px;
+      flex-shrink: 0;
     }
   }
 }

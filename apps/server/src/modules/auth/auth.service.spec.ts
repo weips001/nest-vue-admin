@@ -9,6 +9,7 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from 'nestjs-prisma';
 import { AuthService } from './auth.service';
 import { SysLoginLogService } from '@/modules/sys/sys-login-log/sys-login-log.service';
+import * as svgCaptcha from 'svg-captcha';
 
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
@@ -24,6 +25,13 @@ jest.mock('@/utils/util', () => ({
 
 jest.mock('@/utils/menu.util', () => ({
   simplifyMenuTree: jest.fn(() => []),
+}));
+
+jest.mock('svg-captcha', () => ({
+  createMathExpr: jest.fn(() => ({
+    text: '3+5',
+    data: '<svg>captcha</svg>',
+  })),
 }));
 
 type MockMethod = jest.Mock;
@@ -228,6 +236,30 @@ describe('AuthService', () => {
         expect.stringContaining('user:refresh:'),
         'mock-refresh-token',
         604800 * 1000,
+      );
+    });
+  });
+
+  describe('generateCaptcha', () => {
+    it('应读取 captcha 配置生成验证码', async () => {
+      configService.get.mockImplementation((key: string) => {
+        if (key === 'captcha') {
+          return {
+            size: 6,
+            width: 180,
+            height: 50,
+          };
+        }
+      });
+
+      await service.generateCaptcha();
+
+      expect(svgCaptcha.createMathExpr).toHaveBeenCalledWith(
+        expect.objectContaining({
+          size: 6,
+          width: 180,
+          height: 50,
+        }),
       );
     });
   });

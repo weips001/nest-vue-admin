@@ -25,15 +25,21 @@ router.beforeEach(async (to, from, next) => {
 
   const userStore = useUserStore()
   if (!userStore.currentUser) {
-    await userStore.getCurrentUser()
-    const hasRoutes = await userStore.renderRoutes()
-    // 没有菜单权限，重定向到无权限页面
-    if (!hasRoutes) {
-      next('/no-permission')
+    try {
+      await userStore.getCurrentUser()
+      const hasRoutes = await userStore.renderRoutes()
+      // 没有菜单权限，重定向到无权限页面
+      if (!hasRoutes) {
+        next('/no-permission')
+        return
+      }
+      next({ ...to, replace: true })
+      return
+    } catch {
+      await userStore.logout?.()
+      next(`/auth/login?redirect=${to.fullPath}`)
       return
     }
-    next({ ...to, replace: true })
-    return
   }
   next()
   return

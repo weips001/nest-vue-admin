@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "pnpm run --parallel start"
+    "dev": "pnpm --parallel --filter ./apps/server --filter ./apps/web run dev",
+    "start": "pnpm --parallel --filter ./apps/server --filter ./apps/web run start",
+    "build": "pnpm --filter ./apps/server run build && pnpm --filter ./apps/web run build",
+    "lint": "pnpm --filter ./apps/server run lint && pnpm --filter ./apps/web run lint",
+    "test": "pnpm --filter ./apps/server run test && pnpm --filter ./apps/web run test:run"
   },
   "devDependencies": {
     "eslint": "^9.18.0",
