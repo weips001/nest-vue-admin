@@ -178,19 +178,6 @@ model SysDictDetail {
   @@map("sys_dict_detail")
 }
 
-model Temp {
-  id        String    @id @map("id") @db.VarChar(36)
-  name      String    @map("name") @db.VarChar(20)
-  code      String    @unique @map("code") @db.VarChar(20)
-  tempPath  String    @map("temp_path") @db.VarChar(30)
-  createBy  String?   @map("create_by") @db.VarChar(30)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updateBy  String?   @map("update_by") @db.VarChar(30)
-  updatedAt DateTime  @updatedAt @map("updated_at")
-
-  @@map("temp")
-}
-
 model SysDept {
   /// id
   id        String    @id @map("id") @db.VarChar(36)
@@ -333,35 +320,6 @@ model SysLoginLog {
   @@index([userName, createdAt])
   @@index([userId, status, logoutTime])
   @@map("sys_login_log")
-}
-
-model AutoCode {
-  /// id
-  id        Int       @id @default(autoincrement())
-  /// 模块code
-  name      String    @map("name") @db.VarChar(50)
-  /// 模块中文名称
-  nameZh    String    @map("name_zh") @db.VarChar(50)
-  /// Prisma 表名
-  modelName String    @default("") @map("model_name") @db.VarChar(50)
-  /// Web目录
-  webPath   String    @map("web_path") @db.VarChar(50)
-  /// 模板目录
-  tempId    String    @map("temp_id") @db.VarChar(36)
-  /// 路由地址
-  routePath String    @map("route_path") @db.VarChar(50)
-  /// 字段列表
-  fields    String    @map("fields") @db.Text
-  /// 创建人
-  createBy  String?   @map("create_by") @db.VarChar(30)
-  /// 创建时间
-  createdAt DateTime  @default(now()) @map("created_at")
-  /// 修改人
-  updateBy  String?   @map("update_by") @db.VarChar(30)
-  /// 修改时间
-  updatedAt DateTime  @updatedAt @map("updated_at")
-
-  @@map("auto_code")
 }
 
 model FileUpload {

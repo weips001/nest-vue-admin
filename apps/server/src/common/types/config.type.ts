@@ -19,11 +19,6 @@ export type JwtConfigType = {
   accessTokenExpiresIn: number;
   refreshTokenExpiresIn: number;
 };
-export type GenCodeType = {
-  serverFolder: string;
-  mainModuleName: string;
-};
-
 export type ThrottlerConfigType = {
   ttl: number;
   limit: number;
@@ -36,7 +31,6 @@ export type ConfigType = {
   cache: CacheConfigType;
   redis: RedisConfigType;
   captcha: ConfigObject;
-  genCode: GenCodeType;
   upload: FileUploadType;
   throttler: ThrottlerConfigType;
 };

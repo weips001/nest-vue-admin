@@ -35,12 +35,6 @@ const coreFeatures = [
     desc: '用户 → 角色 → 菜单 / 按钮，v-auth 指令 + @Permission 装饰器，超管四层越权保护',
   },
   {
-    icon: 'ep:cpu',
-    color: '#a855f7',
-    title: '全栈代码生成',
-    desc: '一键生成 10 个文件（Controller / Service / DTO / Prisma / Vue / API / 类型），自动注册路由和权限',
-  },
-  {
     icon: 'ep:office-building',
     color: '#14b8a6',
     title: '部门-岗位-角色联动',

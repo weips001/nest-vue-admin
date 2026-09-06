@@ -61,9 +61,6 @@ export const envValidationSchema = Joi.object({
   CAPTCHA_WIDTH: Joi.number().required(),
   CAPTCHA_HEIGHT: Joi.number().required(),
 
-  GEN_CODE_SERVER_FOLDER: Joi.string().default('src'),
-  GEN_CODE_MAIN_MODULE: Joi.string().default('app.module.ts'),
-
   // 上传模式：默认为 LOCAL
   UPLOAD_MODE: Joi.string()
     .valid(...Object.values(UploadModeEnum))

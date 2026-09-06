@@ -52,13 +52,7 @@ export const getConfig = (): ConfigType => ({
     height: envNumber('CAPTCHA_HEIGHT'),
   },
 
-  // 6. 代码生成
-  genCode: {
-    serverFolder: env('GEN_CODE_SERVER_FOLDER'),
-    mainModuleName: env('GEN_CODE_MAIN_MODULE'),
-  },
-
-  // 7. 上传配置
+  // 6. 上传配置
   upload: {
     maxFileSize: envNumber('UPLOAD_MAX_FILE_SIZE'),
     mode: env('UPLOAD_MODE') as UploadModeEnum,
