@@ -56,12 +56,8 @@ const handleSelect = (name: string) => {
     themeStore.setActiveTopMenuName(name)
     // 找到该一级菜单的第一个可见子菜单并导航
     const topMenu = userStore.menus.find((m) => m.name === name)
-    if (topMenu?.children?.length) {
-      const firstVisible = topMenu.children.find((c) => !c.hidden)
-      if (firstVisible) {
-        selectOne(firstVisible.name)
-      }
-    }
+    const firstVisible = topMenu?.children?.find((c) => !c.hidden)
+    selectOne(firstVisible?.name ?? name)
   } else {
     selectOne(name)
   }

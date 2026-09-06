@@ -48,6 +48,14 @@ const activeMenu = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+.h-full {
+  :deep(.el-scrollbar__wrap) {
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+    overflow-anchor: none;
+  }
+}
+
 .side-menu {
   border-right: none !important;
   background: transparent !important;
@@ -62,35 +70,44 @@ const activeMenu = computed(() => {
     margin: 2px 10px;
     border-radius: 8px;
     height: 44px;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    line-height: 44px;
+    transition:
+      color 0.25s ease,
+      background-color 0.25s ease,
+      box-shadow 0.25s ease;
     position: relative;
     color: rgba(255, 255, 255, 0.7);
+
+    .menu-icon {
+      transition: color 0.2s ease;
+    }
+
+    > .el-icon:not(.el-sub-menu__icon-arrow) {
+      transition: transform 0.2s ease;
+      transform-origin: center;
+    }
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.08);
       color: rgba(255, 255, 255, 0.95);
+
+      > .el-icon:not(.el-sub-menu__icon-arrow) {
+        transform: scale(1.15);
+      }
     }
 
     &.is-active {
-      color: #ffffff;
-      background: linear-gradient(90deg, rgba(64, 158, 255, 0.25) 0%, rgba(64, 158, 255, 0.08) 100%);
+      color: var(--el-color-primary);
+      background: rgba(64, 158, 255, 0.15);
       font-weight: 500;
-      box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+      box-shadow: none;
 
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 3px;
-        height: 20px;
-        background: linear-gradient(180deg, var(--el-color-primary), rgba(64, 158, 255, 0.6));
-        border-radius: 0 3px 3px 0;
+      &:hover {
+        background-color: rgba(64, 158, 255, 0.25);
       }
 
       .menu-icon {
-        color: #ffffff;
+        color: var(--el-color-primary);
       }
     }
   }
@@ -99,17 +116,36 @@ const activeMenu = computed(() => {
     margin: 2px 10px;
     border-radius: 8px;
     height: 44px;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    line-height: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
+    transition:
+      color 0.25s ease,
+      background-color 0.25s ease,
+      box-shadow 0.25s ease;
     color: rgba(255, 255, 255, 0.7);
+
+    .menu-icon {
+      transition: color 0.2s ease;
+    }
+
+    > .el-icon:not(.el-sub-menu__icon-arrow) {
+      transition: transform 0.2s ease;
+      transform-origin: center;
+    }
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.08);
       color: rgba(255, 255, 255, 0.95);
+
+      > .el-icon:not(.el-sub-menu__icon-arrow) {
+        transform: scale(1.15);
+      }
     }
   }
 
   :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--el-color-primary);
     font-weight: 500;
 
     .menu-icon {
@@ -130,6 +166,7 @@ const activeMenu = computed(() => {
 
   :deep(.el-menu--inline) {
     background: transparent !important;
+    padding-top: 2px;
 
     .el-menu-item {
       padding-left: 48px !important;
@@ -140,6 +177,15 @@ const activeMenu = computed(() => {
 
   // 折叠状态样式
   &.el-menu--collapse {
+    :deep(.el-menu-tooltip__trigger) {
+      padding: 0;
+      justify-content: center;
+    }
+
+    :deep(.el-icon) {
+      margin-right: 0;
+    }
+
     :deep(.el-menu-item),
     :deep(.el-sub-menu__title) {
       margin: 2px 8px;
@@ -149,10 +195,6 @@ const activeMenu = computed(() => {
       &:hover {
         transform: none;
       }
-    }
-
-    :deep(.el-menu-item.is-active::before) {
-      left: -8px;
     }
   }
 }
@@ -173,11 +215,11 @@ html:not(.dark) .side-menu {
 
     &.is-active {
       color: var(--el-color-primary);
-      background: rgba(64, 158, 255, 0.06);
+      background: rgba(64, 158, 255, 0.08);
       box-shadow: none;
 
-      &::before {
-        background: var(--el-color-primary);
+      &:hover {
+        background-color: rgba(64, 158, 255, 0.16);
       }
 
       .menu-icon {
@@ -196,7 +238,7 @@ html:not(.dark) .side-menu {
   }
 
   :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
-    color: var(--el-text-color-primary);
+    color: var(--el-color-primary);
 
     .menu-icon {
       color: var(--el-text-color-primary);
@@ -231,15 +273,32 @@ html:not(.dark) .side-menu {
       border-radius: 6px;
       color: rgba(255, 255, 255, 0.7);
 
+      .el-icon {
+        transition: transform 0.2s ease;
+        transform-origin: center;
+      }
+
       &:hover {
         background-color: rgba(255, 255, 255, 0.08);
         color: rgba(255, 255, 255, 0.95);
+
+        .el-icon {
+          transform: scale(1.15);
+        }
       }
 
       &.is-active {
         color: #ffffff;
-        background: linear-gradient(90deg, rgba(64, 158, 255, 0.25) 0%, rgba(64, 158, 255, 0.08) 100%);
+        background: linear-gradient(
+          90deg,
+          rgba(64, 158, 255, 0.25) 0%,
+          rgba(64, 158, 255, 0.08) 100%
+        );
         font-weight: 500;
+
+        &:hover {
+          background-color: rgba(64, 158, 255, 0.12);
+        }
       }
     }
 
@@ -251,9 +310,18 @@ html:not(.dark) .side-menu {
       border-radius: 6px;
       color: rgba(255, 255, 255, 0.7);
 
+      .el-icon {
+        transition: transform 0.2s ease;
+        transform-origin: center;
+      }
+
       &:hover {
         background-color: rgba(255, 255, 255, 0.08);
         color: rgba(255, 255, 255, 0.95);
+
+        .el-icon {
+          transform: scale(1.15);
+        }
       }
     }
   }
@@ -275,7 +343,11 @@ html:not(.dark) .el-menu--vertical {
 
       &.is-active {
         color: var(--el-color-primary);
-        background: rgba(64, 158, 255, 0.06);
+        background: rgba(64, 158, 255, 0.08);
+
+        &:hover {
+          background-color: rgba(64, 158, 255, 0.16);
+        }
       }
     }
 

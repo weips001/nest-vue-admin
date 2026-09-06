@@ -9,7 +9,7 @@ import { computed } from 'vue'
 
 const themeStore = useThemeStore()
 const userStore = useUserStore()
-const { activeTopMenuName } = storeToRefs(themeStore)
+const { activeTopMenuName, isCollapse } = storeToRefs(themeStore)
 
 /** 一级菜单（过滤 hidden） */
 const firstLevelMenus = computed(() => {
@@ -48,7 +48,7 @@ const handleClick = (name: string) => {
 </script>
 
 <template>
-  <div class="column-sidebar">
+  <div class="column-sidebar" :class="{ 'is-collapse': isCollapse }">
     <!-- 左列：一级菜单图标 -->
     <div class="column-sidebar__primary">
       <div class="column-sidebar__logo">
@@ -69,7 +69,11 @@ const handleClick = (name: string) => {
     </div>
 
     <!-- 右列：子菜单 -->
-    <div class="column-sidebar__sub" v-show="activeChildren.length">
+    <div
+      class="column-sidebar__sub"
+      :class="{ 'is-empty': !activeChildren.length }"
+      :aria-hidden="!activeChildren.length"
+    >
       <div class="sub-header">
         <span class="sub-title">Nest-Vue-Admin</span>
       </div>
@@ -99,7 +103,6 @@ const handleClick = (name: string) => {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
     .logo-img {
       width: 28px;
@@ -122,19 +125,8 @@ const handleClick = (name: string) => {
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    position: relative;
     color: rgba(255, 255, 255, 0.55);
-    gap: 6px;
-
-    &:hover {
-      color: rgba(255, 255, 255, 0.85);
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    &.is-active {
-      color: #ffffff;
-      background: var(--el-color-primary);
-      box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
-    }
 
     .primary-label {
       font-size: 10px;
@@ -145,6 +137,27 @@ const handleClick = (name: string) => {
       text-overflow: ellipsis;
       max-width: 54px;
     }
+
+    :deep(svg),
+    :deep(.iconify) {
+      transition: transform 0.2s ease;
+    }
+
+    &:hover {
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.04);
+
+      :deep(svg),
+      :deep(.iconify) {
+        transform: scale(1.15);
+      }
+    }
+
+    &.is-active {
+      color: var(--el-color-primary);
+      background: rgba(64, 158, 255, 0.15);
+      box-shadow: none;
+    }
   }
 
   // 右列：子菜单
@@ -154,21 +167,51 @@ const handleClick = (name: string) => {
     display: flex;
     flex-direction: column;
     background: #21252b;
-    transition: width 0.3s ease, flex 0.3s ease;
+    overflow: hidden;
+    transition:
+      width 0.3s ease,
+      flex 0.3s ease;
+
+    &.is-empty {
+      width: 0;
+      flex-basis: 0;
+    }
 
     .sub-header {
       height: 56px;
+      min-width: 0;
       display: flex;
       align-items: center;
       padding: 0 16px;
       flex-shrink: 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition:
+        opacity 0.15s ease,
+        transform 0.3s ease;
 
       .sub-title {
         font-size: 14px;
         font-weight: 600;
         color: hsla(0, 0%, 100%, 0.95);
         letter-spacing: 0.5px;
+        white-space: nowrap;
+      }
+    }
+
+    :deep(.el-scrollbar) {
+      min-width: 0;
+      flex: 1;
+      height: 0;
+    }
+  }
+
+  &.is-collapse {
+    .column-sidebar__sub:not(.is-empty) {
+      width: 64px;
+      flex-basis: 64px;
+
+      .sub-header {
+        opacity: 0;
+        pointer-events: none;
       }
     }
   }
@@ -181,10 +224,6 @@ html:not(.dark) .column-sidebar {
     border-right-color: #e8e8e8;
   }
 
-  &__logo {
-    border-bottom-color: #e8e8e8;
-  }
-
   .primary-item {
     color: #909399;
 
@@ -194,9 +233,9 @@ html:not(.dark) .column-sidebar {
     }
 
     &.is-active {
-      color: #ffffff;
-      background: var(--el-color-primary);
-      box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+      color: var(--el-color-primary);
+      background: rgba(64, 158, 255, 0.1);
+      box-shadow: none;
     }
   }
 
@@ -204,8 +243,6 @@ html:not(.dark) .column-sidebar {
     background: #ffffff;
 
     .sub-header {
-      border-bottom-color: #f0f0f0;
-
       .sub-title {
         color: var(--el-text-color-primary);
       }

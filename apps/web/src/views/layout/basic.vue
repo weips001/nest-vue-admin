@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import ColumnSidebar from '@/components/mixSidebar/index.vue'
 import LockScreen from '@/components/LockScreen.vue'
 import TheHeader from '@/components/header/TheHeader.vue'
 import TheHeaderActions from '@/components/header/TheHeaderActions.vue'
+import ColumnSidebar from '@/components/mixSidebar/index.vue'
 import SideMenu from '@/components/sideMenu/index.vue'
-import TopMenu from '@/components/topMenu/index.vue'
 import TabsView from '@/components/tabs/TabsView.vue'
+import TopMenu from '@/components/topMenu/index.vue'
 import { useTabsStore } from '@/stores/modules/tabs'
 import { useThemeStore } from '@/stores/modules/theme'
 import { useUserStore } from '@/stores/modules/user'
@@ -132,7 +132,11 @@ watch(layoutMode, () => {
     <!-- ===== 混合模式: 顶部一级菜单 + 侧边栏子菜单 ===== -->
     <template v-if="effectiveLayout === 'mix'">
       <div class="mix-body">
-        <div v-show="!contentFullscreen" class="aside" :class="{ 'is-collapse': isCollapse }">
+        <div
+          v-show="!contentFullscreen && mixSidebarMenus.length > 0"
+          class="aside"
+          :class="{ 'is-collapse': isCollapse }"
+        >
           <SideMenu :menus="mixSidebarMenus" />
         </div>
         <div class="main">
@@ -239,10 +243,12 @@ watch(layoutMode, () => {
     display: flex;
     flex-direction: column;
     background: var(--el-bg-color-page);
+    overflow: hidden;
 
     .content {
       flex: 1;
       min-height: 0;
+      min-width: 0;
       overflow: auto;
 
       .router-view {
@@ -301,6 +307,7 @@ watch(layoutMode, () => {
   .column-body {
     flex: 1;
     min-height: 0;
+    min-width: 0;
     display: flex;
 
     .column-aside {

@@ -2,7 +2,7 @@
 import Breadcrumb from '@/components/breadcrumb/index.vue'
 import TheHeaderActions from '@/components/header/TheHeaderActions.vue'
 import { useThemeStore } from '@/stores/modules/theme'
-import { Fold, Expand } from '@element-plus/icons-vue'
+import { Expand, Fold } from '@element-plus/icons-vue'
 import { storeToRefs } from 'pinia'
 
 const themeStore = useThemeStore()
@@ -12,11 +12,11 @@ const { isCollapse } = storeToRefs(themeStore)
 <template>
   <header class="header">
     <div class="header-left">
-      <el-icon class="collapse-icon" @click="themeStore.toggleCollapse">
+      <el-icon :size="22" class="collapse-icon" @click="themeStore.toggleCollapse">
         <Fold v-if="!isCollapse" />
         <Expand v-else />
       </el-icon>
-      <Breadcrumb style="margin-left: 12px" />
+      <Breadcrumb class="header-breadcrumb" />
     </div>
 
     <TheHeaderActions />
@@ -29,7 +29,9 @@ const { isCollapse } = storeToRefs(themeStore)
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  height: 52px;
+  height: 56px;
+  box-sizing: border-box;
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -41,7 +43,9 @@ const { isCollapse } = storeToRefs(themeStore)
     align-items: center;
 
     .collapse-icon {
-      font-size: 20px;
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
       cursor: pointer;
       color: var(--el-text-color-regular);
       transition: all 0.3s;
@@ -52,6 +56,11 @@ const { isCollapse } = storeToRefs(themeStore)
         color: var(--el-color-primary);
         background: rgba(0, 0, 0, 0.04);
       }
+    }
+
+    .header-breadcrumb {
+      margin-left: 12px;
+      min-width: 0;
     }
   }
 }
