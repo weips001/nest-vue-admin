@@ -1,5 +1,8 @@
 import { CacheModeEnum } from '@/common/enums/config.enum';
-import type { CacheConfigType, RedisConfigType } from '@/common/types/config.type';
+import type {
+  CacheConfigType,
+  RedisConfigType,
+} from '@/common/types/config.type';
 
 jest.mock('@keyv/redis', () => {
   return {

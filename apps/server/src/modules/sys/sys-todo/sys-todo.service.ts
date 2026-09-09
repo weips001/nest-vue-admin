@@ -33,10 +33,7 @@ export class SysTodoService {
         where,
         skip,
         take,
-        orderBy: [
-          { priority: 'desc' },
-          { createdAt: 'desc' },
-        ],
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       }),
       this.prisma.sysTodo.count({ where }),
     ]);
@@ -100,6 +97,7 @@ export class SysTodoService {
         ...dto,
         id: generateUUid(),
         createBy: userId,
+        createById: userId,
       },
     });
   }

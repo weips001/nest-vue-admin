@@ -119,9 +119,7 @@ describe('SysDictService', () => {
         take: 10,
       };
 
-      const mockList = [
-        { id: 1, code: 'gender', name: '性别', status: '0' },
-      ];
+      const mockList = [{ id: 1, code: 'gender', name: '性别', status: '0' }];
       const mockTotal = 1;
 
       prisma.sysDict.findMany.mockResolvedValue(mockList);
@@ -234,10 +232,7 @@ describe('SysDictService', () => {
       });
       // 先删缓存，再写缓存
       expect(cacheManager.del).toHaveBeenCalledWith('dict:key:gender');
-      expect(cacheManager.set).toHaveBeenCalledWith(
-        'dict:key:gender',
-        updated,
-      );
+      expect(cacheManager.set).toHaveBeenCalledWith('dict:key:gender', updated);
       expect(result).toEqual(updated);
     });
 

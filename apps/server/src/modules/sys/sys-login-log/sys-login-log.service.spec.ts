@@ -1,9 +1,9 @@
+import { ExcelExportService } from '@/common/class/export.class';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'nestjs-prisma';
 import { SysLoginLogService } from './sys-login-log.service';
-import { ExcelExportService } from '@/common/class/export.class';
 
 jest.mock('@/utils/util', () => ({
   generateRedisKey: jest.fn((...args: string[]) => args.join(':')),
@@ -86,7 +86,9 @@ describe('SysLoginLogService', () => {
       const call = prismaMock.sysLoginLog.create.mock.calls[0][0];
       const expireTime = call.data.expireTime as Date;
       const expectedExpiry = Date.now() + refreshTokenExpiresIn * 1000;
-      expect(Math.abs(expireTime.getTime() - expectedExpiry)).toBeLessThan(5000);
+      expect(Math.abs(expireTime.getTime() - expectedExpiry)).toBeLessThan(
+        5000,
+      );
     });
 
     it('成功登录的记录 logoutTime 应为 null', async () => {

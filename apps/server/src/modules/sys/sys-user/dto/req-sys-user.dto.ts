@@ -187,8 +187,11 @@ export class UpdatePasswordDto {
   @IsString()
   @MinLength(8, { message: '密码长度不能少于8位' })
   @MaxLength(20, { message: '密码长度不能超过20位' })
-  @Matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).+$/, {
-    message: '密码必须包含字母、数字和特殊字符',
-  })
+  @Matches(
+    /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).+$/,
+    {
+      message: '密码必须包含字母、数字和特殊字符',
+    },
+  )
   newPassword: string;
 }

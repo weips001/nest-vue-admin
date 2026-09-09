@@ -24,8 +24,8 @@ import {
 } from './dto/req-fileUpload.dto';
 import { FileUploadService } from './file-upload.service';
 
-import { User } from '@/common/decorators/user.decorator';
 import { isFileAllowed } from '@/common/constants/upload.constant';
+import { User } from '@/common/decorators/user.decorator';
 import type { CurrentUserType } from '@/common/types/auth.type';
 import { FileInterceptor } from '@nestjs/platform-express';
 

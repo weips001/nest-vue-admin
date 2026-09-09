@@ -10,9 +10,8 @@ export const ALLOWED_EXTENSIONS = {
 } as const;
 
 /** 扁平化的全部允许扩展名 */
-export const ALL_ALLOWED_EXTENSIONS: readonly string[] = Object.values(
-  ALLOWED_EXTENSIONS,
-).flat();
+export const ALL_ALLOWED_EXTENSIONS: readonly string[] =
+  Object.values(ALLOWED_EXTENSIONS).flat();
 
 /** 危险 MIME 类型（可执行的脚本/程序），直接拦截 */
 const DANGEROUS_MIME_TYPES = new Set([

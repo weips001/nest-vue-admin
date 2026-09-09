@@ -80,7 +80,11 @@ describe('SysRoleService - 角色分配用户', () => {
         .mockResolvedValueOnce([{ id: 'user-2' }, { id: 'user-3' }]);
       prismaMock.sysRole.update.mockResolvedValue({ id: 'role-1' });
 
-      await service.updateRoleUsers('role-1', { userIds: ['user-2', 'user-3'] }, { isSuper: false } as any);
+      await service.updateRoleUsers(
+        'role-1',
+        { userIds: ['user-2', 'user-3'] },
+        { isSuper: false } as any,
+      );
 
       // user-1(旧)、user-2(旧+新)、user-3(新) 去重后 3 个
       expect(cacheManagerMock.del).toHaveBeenCalledTimes(3);
@@ -96,11 +100,9 @@ describe('SysRoleService - 角色分配用户', () => {
       });
 
       await expect(
-        service.updateRoleUsers(
-          'super-role',
-          { userIds: ['user-1'] },
-          { isSuper: false } as any,
-        ),
+        service.updateRoleUsers('super-role', { userIds: ['user-1'] }, {
+          isSuper: false,
+        } as any),
       ).rejects.toThrow('只有超级管理员才能修改超管角色');
 
       expect(prismaMock.sysRole.update).not.toHaveBeenCalled();
@@ -117,11 +119,9 @@ describe('SysRoleService - 角色分配用户', () => {
         .mockResolvedValueOnce([{ id: 'user-1' }]);
       prismaMock.sysRole.update.mockResolvedValue({ id: 'super-role' });
 
-      await service.updateRoleUsers(
-        'super-role',
-        { userIds: ['user-1'] },
-        { isSuper: true } as any,
-      );
+      await service.updateRoleUsers('super-role', { userIds: ['user-1'] }, {
+        isSuper: true,
+      } as any);
 
       expect(prismaMock.sysRole.update).toHaveBeenCalled();
       expect(cacheManagerMock.del).toHaveBeenCalledWith('user:info:user-1');
@@ -131,7 +131,9 @@ describe('SysRoleService - 角色分配用户', () => {
       prismaMock.sysRole.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateRoleUsers('nonexistent', { userIds: [] }, { isSuper: false } as any),
+        service.updateRoleUsers('nonexistent', { userIds: [] }, {
+          isSuper: false,
+        } as any),
       ).rejects.toThrow('角色不存在');
     });
   });

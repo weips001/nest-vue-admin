@@ -1,5 +1,9 @@
-import { ArgumentMetadata, BadRequestException, ValidationPipe } from '@nestjs/common';
 import { LoginReqDto } from '@/modules/auth/dto/req-auth.dto';
+import {
+  ArgumentMetadata,
+  BadRequestException,
+  ValidationPipe,
+} from '@nestjs/common';
 
 describe('CommonModule ValidationPipe', () => {
   const metadata: ArgumentMetadata = {

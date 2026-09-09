@@ -1,14 +1,21 @@
-import { Global, Logger, Module, OnModuleInit, ValidationPipe } from '@nestjs/common';
+import {
+  Global,
+  Logger,
+  Module,
+  OnModuleInit,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import { CacheModeEnum } from '@/common/enums/config.enum';
 import { createCacheModuleOptions } from '@/common/cache/cache-options.factory';
 import { ExcelExportService } from '@/common/class/export.class';
+import { CacheModeEnum } from '@/common/enums/config.enum';
 import { HttpExceptionFilter } from '@/common/filters/exception.filter';
 import { DemoEnvironmentGuard } from '@/common/guards/demo.guard';
 import { DevOnlyGuard } from '@/common/guards/devOnly.guard';
 import { JwtAuthGuard } from '@/common/guards/jwtAuth.guard';
 import { ActionInterceptor } from '@/common/interceptors/action.interceptor';
+import { DataScopeService } from '@/common/services/data-scope.service';
 import {
   CacheConfigType,
   RedisConfigType,
@@ -17,17 +24,9 @@ import {
 import { getConfig } from '@/config/config';
 import { envValidationSchema } from '@/config/config.validation';
 import { CacheModule } from '@nestjs/cache-manager';
-import {
-  APP_FILTER,
-  APP_GUARD,
-  APP_INTERCEPTOR,
-  APP_PIPE,
-} from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import {
-  ThrottlerGuard,
-  ThrottlerModule,
-} from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule, PrismaService } from 'nestjs-prisma';
 import { PermissionGuard } from './guards/permission.guard';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
@@ -97,6 +96,7 @@ const logger = new Logger('CacheModule');
   ],
   providers: [
     ExcelExportService,
+    DataScopeService,
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({
@@ -138,7 +138,7 @@ const logger = new Logger('CacheModule');
       useClass: ResponseInterceptor,
     },
   ],
-  exports: [ExcelExportService],
+  exports: [ExcelExportService, DataScopeService],
 })
 export class CommonModule implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
@@ -176,7 +176,8 @@ function formatSql(query: string, params: string): string {
     return query.replace(/\?/g, () => {
       const val = values[idx++];
       if (val === null || val === undefined) return 'NULL';
-      if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+      if (typeof val === 'number' || typeof val === 'boolean')
+        return String(val);
       return `'${String(val).replace(/'/g, "\\'")}'`;
     });
   } catch {

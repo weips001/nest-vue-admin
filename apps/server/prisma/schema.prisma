@@ -29,6 +29,8 @@ model SysUser {
   postId    String?   @map("post_id") @db.VarChar(36)
   remark    String?   @db.VarChar(255)
   createBy  String?   @map("create_by") @db.VarChar(30)
+  /// 创建人ID（数据权限）
+  createById String?  @map("create_by_id") @db.VarChar(36)
   createdAt DateTime  @default(now()) @map("created_at")
   updateBy  String?   @map("update_by") @db.VarChar(30)
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -45,6 +47,7 @@ model SysUser {
   mustChangePassword Boolean @default(false) @map("must_change_password")
 
   @@index([deptId])
+  @@index([createById])
   @@index([phone])
   @@index([status])
   @@map("sys_user")
@@ -242,6 +245,8 @@ model SysPost {
   remark    String?   @db.VarChar(255)
   /// 创建人
   createBy  String?   @map("create_by") @db.VarChar(30)
+  /// 创建人ID（数据权限）
+  createById String?  @map("create_by_id") @db.VarChar(36)
   /// 创建时间
   createdAt DateTime  @default(now()) @map("created_at")
   /// 修改人
@@ -256,6 +261,8 @@ model SysPost {
   /// 岗位关联的默认角色
   roles     SysRole[]
 
+  @@index([deptId])
+  @@index([createById])
   @@map("sys_post")
 }
 
@@ -339,6 +346,8 @@ model FileUpload {
   mime      String    @map("mime") @db.VarChar(100)
   /// 创建人
   createBy  String?   @map("create_by") @db.VarChar(30)
+  /// 创建人ID（数据权限）
+  createById String?  @map("create_by_id") @db.VarChar(36)
   /// 创建时间
   createdAt DateTime  @default(now()) @map("created_at")
   /// 修改人
@@ -346,6 +355,7 @@ model FileUpload {
   /// 修改时间
   updatedAt DateTime  @updatedAt @map("updated_at")
 
+  @@index([createById])
   @@map("file_upload")
 }
 
@@ -362,6 +372,8 @@ model SysNotice {
   status    String           @default("0") @db.Char(1)
   /// 创建人
   createBy  String?          @map("create_by") @db.VarChar(30)
+  /// 创建人ID（数据权限）
+  createById String?         @map("create_by_id") @db.VarChar(36)
   /// 创建时间
   createdAt DateTime         @default(now()) @map("created_at")
   /// 修改人
@@ -371,6 +383,7 @@ model SysNotice {
   /// 阅读记录
   reads     SysNoticeRead[]
 
+  @@index([createById])
   @@map("sys_notice")
 }
 
@@ -413,6 +426,8 @@ model SysTodo {
   userId      String    @map("user_id") @db.VarChar(36)
   /// 创建人
   createBy    String?   @map("create_by") @db.VarChar(30)
+  /// 创建人ID（数据权限）
+  createById  String?   @map("create_by_id") @db.VarChar(36)
   /// 创建时间
   createdAt   DateTime  @default(now()) @map("created_at")
   /// 完成人
@@ -423,6 +438,7 @@ model SysTodo {
   user        SysUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
+  @@index([createById])
   @@map("sys_todo")
 }
 
@@ -465,6 +481,8 @@ model SysJob {
   remark    String?   @db.VarChar(255)
   /// 创建人
   createBy  String?   @map("create_by") @db.VarChar(30)
+  /// 创建人ID（数据权限）
+  createById String?  @map("create_by_id") @db.VarChar(36)
   /// 创建时间
   createdAt DateTime  @default(now()) @map("created_at")
   /// 修改人
@@ -472,6 +490,7 @@ model SysJob {
   /// 修改时间
   updatedAt DateTime  @updatedAt @map("updated_at")
 
+  @@index([createById])
   @@map("sys_job")
 }
 

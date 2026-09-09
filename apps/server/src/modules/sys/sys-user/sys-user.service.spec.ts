@@ -1,4 +1,8 @@
+jest.mock('@prisma/client', () => ({ Prisma: {} }));
+jest.mock('nestjs-prisma', () => ({ PrismaService: class PrismaService {} }));
+
 import { ExcelExportService } from '@/common/class/export.class';
+import { DataScopeService } from '@/common/services/data-scope.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -57,7 +61,11 @@ describe('SysUserService - 创建用户写入初始密码历史 (Task 7)', () =>
           useValue: { get: jest.fn(), set: jest.fn(), del: jest.fn() },
         },
         { provide: ExcelExportService, useValue: { export: jest.fn() } },
-        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(5) } },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn().mockReturnValue(5) },
+        },
+        { provide: DataScopeService, useValue: new DataScopeService() },
       ],
     }).compile();
 

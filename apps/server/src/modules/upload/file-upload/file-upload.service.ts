@@ -29,6 +29,7 @@ export class FileUploadService {
         id: generateUUid(),
         ...result,
         createBy: user.nickName,
+        createById: user.id,
       },
     });
   }

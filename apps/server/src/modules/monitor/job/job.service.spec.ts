@@ -1,10 +1,13 @@
+jest.mock('@prisma/client', () => ({ Prisma: {} }));
+jest.mock('nestjs-prisma', () => ({ PrismaService: class PrismaService {} }));
+
+import { generateUUid } from '@/utils/util';
+import { ModuleRef } from '@nestjs/core';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'nestjs-prisma';
-import { JobService } from './job.service';
 import { JobLogService } from './job-log.service';
-import { SchedulerRegistry } from '@nestjs/schedule';
-import { ModuleRef } from '@nestjs/core';
-import { generateUUid } from '@/utils/util';
+import { JobService } from './job.service';
 
 jest.mock('@/utils/util', () => ({
   generateUUid: jest.fn(() => 'mock-uuid-12345678901234567890'),
@@ -36,7 +39,9 @@ describe('JobService', () => {
     schedulerRegistryMock = {
       addCronJob: jest.fn(),
       deleteCronJob: jest.fn(),
-      getCronJob: jest.fn(() => { throw new Error('not found'); }),
+      getCronJob: jest.fn(() => {
+        throw new Error('not found');
+      }),
     };
 
     moduleRefMock = {
@@ -60,9 +65,7 @@ describe('JobService', () => {
 
   describe('findAll - 分页查询任务列表', () => {
     it('应返回分页列表', async () => {
-      const mockList = [
-        { id: '1', jobName: '清理日志', status: '0' },
-      ];
+      const mockList = [{ id: '1', jobName: '清理日志', status: '0' }];
       prismaMock.sysJob.findMany.mockResolvedValue(mockList);
       prismaMock.sysJob.count.mockResolvedValue(1);
 
@@ -119,10 +122,15 @@ describe('JobService', () => {
       const mockJob = { id: 'mock-uuid-12345678901234567890', ...dto };
       prismaMock.sysJob.create.mockResolvedValue(mockJob);
 
-      const result = await service.create(dto as any);
+      const result = await service.create(dto as any, { id: 'user-1' } as any);
       expect(result).toEqual(mockJob);
       expect(generateUUid).toHaveBeenCalled();
       expect(prismaMock.sysJob.create).toHaveBeenCalled();
+      expect(prismaMock.sysJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ createById: 'user-1' }),
+        }),
+      );
       // 启用的任务应该注册 cron
       expect(schedulerRegistryMock.addCronJob).toHaveBeenCalled();
     });
@@ -137,7 +145,7 @@ describe('JobService', () => {
       };
       prismaMock.sysJob.create.mockResolvedValue({ id: '1', ...dto });
 
-      await service.create(dto as any);
+      await service.create(dto as any, { id: 'user-1' } as any);
       expect(schedulerRegistryMock.addCronJob).not.toHaveBeenCalled();
     });
   });
@@ -146,8 +154,10 @@ describe('JobService', () => {
     it('应更新任务并重新注册cron', async () => {
       const mockCronJob = { stop: jest.fn() };
       schedulerRegistryMock.getCronJob
-        .mockReturnValueOnce(mockCronJob)  // 删除旧 cron 时找到
-        .mockImplementation(() => { throw new Error('not found'); }); // 再次检查时不存在
+        .mockReturnValueOnce(mockCronJob) // 删除旧 cron 时找到
+        .mockImplementation(() => {
+          throw new Error('not found');
+        }); // 再次检查时不存在
 
       prismaMock.sysJob.findUnique.mockResolvedValue({
         id: '1',
@@ -248,17 +258,23 @@ describe('JobService', () => {
       };
       prismaMock.sysJob.findUnique.mockResolvedValue(mockJob);
       jobLogServiceMock.createLog.mockResolvedValue({ id: 1 });
-      moduleRefMock.get.mockReturnValue({ run: jest.fn().mockResolvedValue(undefined) });
+      moduleRefMock.get.mockReturnValue({
+        run: jest.fn().mockResolvedValue(undefined),
+      });
 
       await service.runOnce('1');
-      expect(prismaMock.sysJob.findUnique).toHaveBeenCalledWith({ where: { id: '1' } });
+      expect(prismaMock.sysJob.findUnique).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
       expect(jobLogServiceMock.createLog).toHaveBeenCalled();
     });
 
     it('任务不存在应抛出异常', async () => {
       prismaMock.sysJob.findUnique.mockResolvedValue(null);
 
-      await expect(service.runOnce('non-existent')).rejects.toThrow('任务不存在');
+      await expect(service.runOnce('non-existent')).rejects.toThrow(
+        '任务不存在',
+      );
     });
   });
 
@@ -273,7 +289,9 @@ describe('JobService', () => {
     });
 
     it('应正确解析带参数的调用', () => {
-      const result = service.parseInvokeTarget('someService.doSomething("arg1", 123)');
+      const result = service.parseInvokeTarget(
+        'someService.doSomething("arg1", 123)',
+      );
       expect(result).toEqual({
         serviceName: 'someService',
         methodName: 'doSomething',
@@ -282,7 +300,9 @@ describe('JobService', () => {
     });
 
     it('格式错误应抛出异常', () => {
-      expect(() => service.parseInvokeTarget('invalid-format')).toThrow('任务目标格式错误');
+      expect(() => service.parseInvokeTarget('invalid-format')).toThrow(
+        '任务目标格式错误',
+      );
     });
   });
 });

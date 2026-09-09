@@ -29,7 +29,9 @@ export class CreateSysTodoDto {
   @IsString()
   content: string;
 
-  @ApiProperty({ description: '业务类型：approval审批, confirm确认, review审核' })
+  @ApiProperty({
+    description: '业务类型：approval审批, confirm确认, review审核',
+  })
   @IsString()
   @MaxLength(20)
   bizType: string;

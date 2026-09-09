@@ -1,10 +1,10 @@
 import { Action } from '@/common/decorators/action.decorator';
 import { Permission } from '@/common/decorators/permission.decorator';
 import { User } from '@/common/decorators/user.decorator';
-import type { CurrentUserType } from '@/common/types/auth.type';
 import { ActionEnum } from '@/common/enums/action.enum';
 import { CreateDtoPipe } from '@/common/pipes/createDto.pipe';
 import { UpdateDtoPipe } from '@/common/pipes/updateDto.pipe';
+import type { CurrentUserType } from '@/common/types/auth.type';
 import {
   Body,
   Controller,

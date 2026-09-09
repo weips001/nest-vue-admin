@@ -1,3 +1,6 @@
+jest.mock('@prisma/client', () => ({ Prisma: {} }));
+jest.mock('nestjs-prisma', () => ({ PrismaService: class PrismaService {} }));
+
 import { ApiException } from '@/common/exceptions/api.exception';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'nestjs-prisma';
@@ -63,7 +66,10 @@ describe('SysTodoService', () => {
       mockPrismaService.sysTodo.findMany.mockResolvedValue(mockTodos as any);
       mockPrismaService.sysTodo.count.mockResolvedValue(2);
 
-      const result = await service.findAll('user-1', { skip: 0, take: 10 } as any);
+      const result = await service.findAll('user-1', {
+        skip: 0,
+        take: 10,
+      } as any);
 
       expect(result.list).toHaveLength(2);
       expect(result.total).toBe(2);
@@ -80,7 +86,11 @@ describe('SysTodoService', () => {
       mockPrismaService.sysTodo.findMany.mockResolvedValue([]);
       mockPrismaService.sysTodo.count.mockResolvedValue(0);
 
-      await service.findAll('user-1', { skip: 0, take: 10, title: '审批' } as any);
+      await service.findAll('user-1', {
+        skip: 0,
+        take: 10,
+        title: '审批',
+      } as any);
 
       expect(mockPrismaService.sysTodo.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -95,7 +105,11 @@ describe('SysTodoService', () => {
       mockPrismaService.sysTodo.findMany.mockResolvedValue([]);
       mockPrismaService.sysTodo.count.mockResolvedValue(0);
 
-      await service.findAll('user-1', { skip: 0, take: 10, status: 'pending' } as any);
+      await service.findAll('user-1', {
+        skip: 0,
+        take: 10,
+        status: 'pending',
+      } as any);
 
       expect(mockPrismaService.sysTodo.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -153,8 +167,12 @@ describe('SysTodoService', () => {
     it('待办不存在时应该抛出异常', async () => {
       mockPrismaService.sysTodo.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('non-existent')).rejects.toThrow(ApiException);
-      await expect(service.findOne('non-existent')).rejects.toThrow('待办事项不存在');
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        ApiException,
+      );
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        '待办事项不存在',
+      );
     });
   });
 
@@ -181,6 +199,7 @@ describe('SysTodoService', () => {
           data: expect.objectContaining({
             title: '新待办',
             createBy: 'user-1',
+            createById: 'user-1',
           }),
         }),
       );

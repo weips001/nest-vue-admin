@@ -1,13 +1,21 @@
-import { ApiException } from '@/common/exceptions/api.exception';
+jest.mock('@prisma/client', () => ({ Prisma: {} }));
+jest.mock('nestjs-prisma', () => ({ PrismaService: class PrismaService {} }));
+
 import { ExcelExportService } from '@/common/class/export.class';
+import { DataScopeEnum } from '@/common/enums/dataScope.enum';
+import { ApiException } from '@/common/exceptions/api.exception';
+import { DataScopeService } from '@/common/services/data-scope.service';
+import type { CurrentUserType } from '@/common/types/auth.type';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { Response } from 'express';
 import { PrismaService } from 'nestjs-prisma';
-import { SysPostService } from './sys-post.service';
 import type {
   CreateSysPostDto,
   UpdateSysPostDto,
 } from './dto/req-sys-post.dto';
+import { GetSysPostListDto } from './dto/req-sys-post.dto';
+import { SysPostService } from './sys-post.service';
 
 /* Mock 类型定义 */
 type MockMethod = jest.Mock;
@@ -92,6 +100,7 @@ describe('SysPostService', () => {
           provide: ExcelExportService,
           useValue: mockExcelExportService,
         },
+        { provide: DataScopeService, useValue: new DataScopeService() },
       ],
     }).compile();
 
@@ -118,11 +127,12 @@ describe('SysPostService', () => {
         ...createDto,
       });
 
-      await service.create(createDto);
+      await service.create(createDto, { id: 'user-1' } as any);
 
       expect(mockPrismaService.sysPost.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
+            createById: 'user-1',
             roles: {
               connect: [{ id: 'role-1' }, { id: 'role-2' }],
             },
@@ -144,7 +154,7 @@ describe('SysPostService', () => {
         ...createDto,
       });
 
-      await service.create(createDto);
+      await service.create(createDto, { id: 'user-1' } as any);
 
       const createCall = mockPrismaService.sysPost.create.mock.calls[0][0];
       expect(createCall.data).not.toHaveProperty('roles');
@@ -158,7 +168,7 @@ describe('SysPostService', () => {
         roleIds: ['role-1', 'role-3'],
       } as any;
 
-      mockPrismaService.sysPost.findFirst.mockResolvedValue(null);
+      mockPrismaService.sysPost.findFirst.mockResolvedValue({ id: 'post-1' });
       mockPrismaService.sysPost.update.mockResolvedValue({
         id: 'post-1',
         ...updateDto,
@@ -168,7 +178,10 @@ describe('SysPostService', () => {
         { id: 'user-2' },
       ]);
 
-      await service.update('post-1', updateDto);
+      await service.update('post-1', updateDto, {
+        id: 'user-1',
+        dataScope: { scope: 'ALL', deptIds: [] },
+      } as any);
 
       expect(mockPrismaService.sysPost.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -190,14 +203,17 @@ describe('SysPostService', () => {
         name: '技术总监V2',
       } as any;
 
-      mockPrismaService.sysPost.findFirst.mockResolvedValue(null);
+      mockPrismaService.sysPost.findFirst.mockResolvedValue({ id: 'post-1' });
       mockPrismaService.sysPost.update.mockResolvedValue({
         id: 'post-1',
         ...updateDto,
       });
       mockPrismaService.sysUser.findMany.mockResolvedValue([]);
 
-      await service.update('post-1', updateDto);
+      await service.update('post-1', updateDto, {
+        id: 'user-1',
+        dataScope: { scope: 'ALL', deptIds: [] },
+      } as any);
 
       const updateCall = mockPrismaService.sysPost.update.mock.calls[0][0];
       expect(updateCall.data).not.toHaveProperty('roles');
@@ -216,13 +232,16 @@ describe('SysPostService', () => {
         ],
       };
 
-      mockPrismaService.sysPost.findUnique.mockResolvedValue(mockPost as any);
+      mockPrismaService.sysPost.findFirst.mockResolvedValue(mockPost as any);
 
-      const result = await service.findOne('post-1');
+      const result = await service.findOne('post-1', {
+        id: 'user-1',
+        dataScope: { scope: 'ALL', deptIds: [] },
+      } as any);
 
-      expect(mockPrismaService.sysPost.findUnique).toHaveBeenCalledWith(
+      expect(mockPrismaService.sysPost.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'post-1' },
+          where: { AND: [{ id: 'post-1' }, {}] },
           include: expect.objectContaining({
             roles: { select: { id: true, name: true } },
           }),
@@ -234,25 +253,34 @@ describe('SysPostService', () => {
 
   describe('getPostRoleIds', () => {
     it('应该返回岗位关联的角色 ID 列表', async () => {
-      mockPrismaService.sysPost.findUnique.mockResolvedValue({
+      mockPrismaService.sysPost.findFirst.mockResolvedValue({
         id: 'post-1',
         roles: [{ id: 'role-1' }, { id: 'role-2' }],
       } as any);
 
-      const result = await service.getPostRoleIds('post-1');
+      const result = await service.getPostRoleIds('post-1', {
+        id: 'user-1',
+        dataScope: { scope: 'ALL', deptIds: [] },
+      } as any);
 
       expect(result).toEqual(['role-1', 'role-2']);
     });
 
     it('岗位不存在时应该抛出 ApiException', async () => {
-      mockPrismaService.sysPost.findUnique.mockResolvedValue(null);
+      mockPrismaService.sysPost.findFirst.mockResolvedValue(null);
 
-      await expect(service.getPostRoleIds('non-existent')).rejects.toThrow(
-        ApiException,
-      );
-      await expect(service.getPostRoleIds('non-existent')).rejects.toThrow(
-        '岗位不存在',
-      );
+      await expect(
+        service.getPostRoleIds('non-existent', {
+          id: 'user-1',
+          dataScope: { scope: 'ALL', deptIds: [] },
+        } as any),
+      ).rejects.toThrow(ApiException);
+      await expect(
+        service.getPostRoleIds('non-existent', {
+          id: 'user-1',
+          dataScope: { scope: 'ALL', deptIds: [] },
+        } as any),
+      ).rejects.toThrow('岗位不存在');
     });
   });
 
@@ -269,7 +297,10 @@ describe('SysPostService', () => {
         },
       ] as any);
 
-      const result = await service.getOptions();
+      const result = await service.getOptions(undefined, {
+        id: 'user-1',
+        dataScope: { scope: 'ALL', deptIds: [] },
+      } as any);
 
       expect(result[0]).toEqual(
         expect.objectContaining({
@@ -279,6 +310,65 @@ describe('SysPostService', () => {
           roleIds: ['role-1', 'role-2'],
         }),
       );
+    });
+  });
+
+  describe('exportExcel', () => {
+    it('应应用数据权限且不向岗位查询传入分页参数', async () => {
+      const currentUser = {
+        id: 'user-1',
+        dataScope: {
+          scope: DataScopeEnum.DEPT,
+          deptIds: ['dept-1'],
+        },
+      } as CurrentUserType;
+      const query: GetSysPostListDto = Object.assign(new GetSysPostListDto(), {
+        name: '研发',
+        current: 2,
+        pageSize: 10,
+      });
+      const fields = [{ key: 'name', label: '岗位名称' }];
+      const posts = [
+        {
+          id: 'post-1',
+          name: '研发岗位',
+          deptId: 'dept-1',
+        },
+      ];
+      const response = {
+        setHeader: jest.fn(),
+        send: jest.fn(),
+      } as Response;
+
+      mockPrismaService.sysPost.findMany.mockResolvedValue(posts);
+      mockPrismaService.sysPost.count.mockResolvedValue(1);
+      mockPrismaService.sysUser.groupBy.mockResolvedValue([]);
+      mockExcelExportService.export.mockResolvedValue(Buffer.from('xlsx'));
+
+      await service.exportExcel(fields, query, currentUser, response);
+
+      const findManyCalls = mockPrismaService.sysPost.findMany.mock
+        .calls as unknown as Array<
+        [
+          {
+            where: unknown;
+            skip?: unknown;
+            take?: unknown;
+          },
+        ]
+      >;
+      const findManyArgs = findManyCalls[0][0];
+      expect(findManyArgs.where).toEqual({
+        AND: [{ name: { contains: '研发' } }, { deptId: { in: ['dept-1'] } }],
+      });
+      expect(findManyArgs).not.toHaveProperty('skip');
+      expect(findManyArgs).not.toHaveProperty('take');
+      expect(mockExcelExportService.export).toHaveBeenCalledWith({
+        columns: fields,
+        data: [{ ...posts[0], userCount: 0 }],
+        filename: '岗位列表',
+      });
+      expect(response.send).toHaveBeenCalledWith(Buffer.from('xlsx'));
     });
   });
 });

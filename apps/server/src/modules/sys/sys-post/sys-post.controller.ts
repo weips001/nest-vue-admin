@@ -1,7 +1,9 @@
-import { Permission } from '@/common/decorators/permission.decorator';
 import type { ExportColumn } from '@/common/class/export.class';
+import { Permission } from '@/common/decorators/permission.decorator';
+import { User } from '@/common/decorators/user.decorator';
 import { CreateDtoPipe } from '@/common/pipes/createDto.pipe';
 import { UpdateDtoPipe } from '@/common/pipes/updateDto.pipe';
+import type { CurrentUserType } from '@/common/types/auth.type';
 import {
   Body,
   Controller,
@@ -33,8 +35,11 @@ export class SysPostController {
   })
   @Permission('sys:post:create')
   @Post()
-  create(@Body(CreateDtoPipe) createSysPostDto: CreateSysPostDto) {
-    return this.sysPostService.create(createSysPostDto);
+  create(
+    @Body(CreateDtoPipe) createSysPostDto: CreateSysPostDto,
+    @User() user: CurrentUserType,
+  ) {
+    return this.sysPostService.create(createSysPostDto, user);
   }
 
   @ApiOperation({
@@ -42,8 +47,8 @@ export class SysPostController {
   })
   @Permission('sys:post:list')
   @Get()
-  findAll(@Query() query: GetSysPostListDto) {
-    return this.sysPostService.findAll(query);
+  findAll(@Query() query: GetSysPostListDto, @User() user: CurrentUserType) {
+    return this.sysPostService.findAll(query, user);
   }
 
   @ApiOperation({
@@ -54,17 +59,21 @@ export class SysPostController {
   exportExcel(
     @Body() body: { fields: ExportColumn[] },
     @Query() query: GetSysPostListDto,
+    @User() user: CurrentUserType,
     @Res() res: Response,
   ) {
-    return this.sysPostService.exportExcel(body.fields, query, res);
+    return this.sysPostService.exportExcel(body.fields, query, user, res);
   }
 
   @ApiOperation({
     summary: '获取岗位选项',
   })
   @Get('options')
-  getOptions(@Query('deptId') deptId?: string) {
-    return this.sysPostService.getOptions(deptId);
+  getOptions(
+    @Query('deptId') deptId: string | undefined,
+    @User() user: CurrentUserType,
+  ) {
+    return this.sysPostService.getOptions(deptId, user);
   }
 
   @ApiOperation({
@@ -72,8 +81,8 @@ export class SysPostController {
   })
   @Permission('sys:post:detail')
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.sysPostService.findOne(id);
+  findOne(@Param('id') id: string, @User() user: CurrentUserType) {
+    return this.sysPostService.findOne(id, user);
   }
 
   @ApiOperation({
@@ -81,8 +90,8 @@ export class SysPostController {
   })
   @Permission('sys:post:list')
   @Get(':id/roles')
-  getPostRoleIds(@Param('id') id: string) {
-    return this.sysPostService.getPostRoleIds(id);
+  getPostRoleIds(@Param('id') id: string, @User() user: CurrentUserType) {
+    return this.sysPostService.getPostRoleIds(id, user);
   }
 
   @ApiOperation({
@@ -93,8 +102,9 @@ export class SysPostController {
   update(
     @Param('id') id: string,
     @Body(UpdateDtoPipe) updateSysPostDto: UpdateSysPostDto,
+    @User() user: CurrentUserType,
   ) {
-    return this.sysPostService.update(id, updateSysPostDto);
+    return this.sysPostService.update(id, updateSysPostDto, user);
   }
 
   @ApiOperation({
@@ -102,8 +112,8 @@ export class SysPostController {
   })
   @Permission('sys:post:remove')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.sysPostService.remove(id);
+  remove(@Param('id') id: string, @User() user: CurrentUserType) {
+    return this.sysPostService.remove(id, user);
   }
 
   @ApiOperation({
@@ -111,7 +121,7 @@ export class SysPostController {
   })
   @Permission('sys:post:remove')
   @Delete('batch')
-  removes(@Body() body: { ids: string[] }) {
-    return this.sysPostService.removes(body.ids);
+  removes(@Body() body: { ids: string[] }, @User() user: CurrentUserType) {
+    return this.sysPostService.removes(body.ids, user);
   }
 }

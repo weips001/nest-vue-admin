@@ -1,7 +1,12 @@
 import { Permission } from '@/common/decorators/permission.decorator';
-import { DelCommonNumbersDto, DelCommonStringsDto } from '@/common/dtos/common.dto';
+import { User } from '@/common/decorators/user.decorator';
+import {
+  DelCommonNumbersDto,
+  DelCommonStringsDto,
+} from '@/common/dtos/common.dto';
 import { CreateDtoPipe } from '@/common/pipes/createDto.pipe';
 import { UpdateDtoPipe } from '@/common/pipes/updateDto.pipe';
+import type { CurrentUserType } from '@/common/types/auth.type';
 import {
   Body,
   Controller,
@@ -13,7 +18,12 @@ import {
   Query,
   UsePipes,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   ChangeJobStatusDto,
   CreateJobDto,
@@ -83,8 +93,8 @@ export class JobController {
   @ApiOperation({ summary: '新增任务' })
   @Permission('monitor:job:create')
   @UsePipes(CreateDtoPipe)
-  create(@Body() dto: CreateJobDto) {
-    return this.jobService.create(dto);
+  create(@Body() dto: CreateJobDto, @User() user: CurrentUserType) {
+    return this.jobService.create(dto, user);
   }
 
   /* 修改任务状态 */

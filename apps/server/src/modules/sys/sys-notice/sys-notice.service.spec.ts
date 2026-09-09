@@ -1,3 +1,6 @@
+jest.mock('@prisma/client', () => ({ Prisma: {} }));
+jest.mock('nestjs-prisma', () => ({ PrismaService: class PrismaService {} }));
+
 import { ApiException } from '@/common/exceptions/api.exception';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'nestjs-prisma';
@@ -102,7 +105,9 @@ describe('SysNoticeService', () => {
   describe('findOne', () => {
     it('应该返回通知详情', async () => {
       const mockNotice = { id: 'notice-1', title: '通知1', content: '内容1' };
-      mockPrismaService.sysNotice.findUnique.mockResolvedValue(mockNotice as any);
+      mockPrismaService.sysNotice.findUnique.mockResolvedValue(
+        mockNotice as any,
+      );
 
       const result = await service.findOne('notice-1');
 
@@ -112,8 +117,12 @@ describe('SysNoticeService', () => {
     it('通知不存在时应该抛出异常', async () => {
       mockPrismaService.sysNotice.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('non-existent')).rejects.toThrow(ApiException);
-      await expect(service.findOne('non-existent')).rejects.toThrow('通知不存在');
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        ApiException,
+      );
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        '通知不存在',
+      );
     });
   });
 
@@ -139,6 +148,7 @@ describe('SysNoticeService', () => {
           data: expect.objectContaining({
             title: '新通知',
             createBy: 'user-1',
+            createById: 'user-1',
           }),
         }),
       );
@@ -159,7 +169,11 @@ describe('SysNoticeService', () => {
         title: '更新后的标题',
       } as any);
 
-      const result = await service.update('notice-1', updateDto as any, 'user-1');
+      const result = await service.update(
+        'notice-1',
+        updateDto as any,
+        'user-1',
+      );
 
       expect(result.title).toBe('更新后的标题');
     });
@@ -192,7 +206,9 @@ describe('SysNoticeService', () => {
     it('删除不存在的通知时应该抛出异常', async () => {
       mockPrismaService.sysNotice.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('non-existent')).rejects.toThrow('通知不存在');
+      await expect(service.remove('non-existent')).rejects.toThrow(
+        '通知不存在',
+      );
     });
   });
 
@@ -234,7 +250,10 @@ describe('SysNoticeService', () => {
         { noticeId: 'notice-1', readAt: new Date() },
       ] as any);
 
-      const result = await service.getUserNotices('user-1', { skip: 0, take: 10 });
+      const result = await service.getUserNotices('user-1', {
+        skip: 0,
+        take: 10,
+      });
 
       expect(result.list).toHaveLength(2);
       expect(result.list[0].isRead).toBe(true);
@@ -264,7 +283,10 @@ describe('SysNoticeService', () => {
     it('无通知时应该返回空列表', async () => {
       mockPrismaService.sysNotice.findMany.mockResolvedValue([]);
 
-      const result = await service.getUserNotices('user-1', { skip: 0, take: 10 });
+      const result = await service.getUserNotices('user-1', {
+        skip: 0,
+        take: 10,
+      });
 
       expect(result.list).toEqual([]);
       expect(result.total).toBe(0);
@@ -289,9 +311,9 @@ describe('SysNoticeService', () => {
     it('通知不存在时应该抛出异常', async () => {
       mockPrismaService.sysNotice.findUnique.mockResolvedValue(null);
 
-      await expect(service.markAsRead('non-existent', 'user-1')).rejects.toThrow(
-        '通知不存在',
-      );
+      await expect(
+        service.markAsRead('non-existent', 'user-1'),
+      ).rejects.toThrow('通知不存在');
     });
 
     it('已读时不应该重复创建记录', async () => {
@@ -323,7 +345,9 @@ describe('SysNoticeService', () => {
         { noticeId: 'notice-1' },
       ] as any);
 
-      mockPrismaService.sysNoticeRead.createMany.mockResolvedValue({ count: 2 });
+      mockPrismaService.sysNoticeRead.createMany.mockResolvedValue({
+        count: 2,
+      });
 
       await service.markAllAsRead('user-1');
 

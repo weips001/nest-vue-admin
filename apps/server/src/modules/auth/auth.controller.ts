@@ -7,7 +7,12 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { ChangeExpiredPasswordDto, LoginReqDto, RefreshTokenDto, VerifyPasswordDto } from './dto/req-auth.dto';
+import {
+  ChangeExpiredPasswordDto,
+  LoginReqDto,
+  RefreshTokenDto,
+  VerifyPasswordDto,
+} from './dto/req-auth.dto';
 
 @ApiTags('权限接口')
 @ApiBearerAuth()
@@ -91,7 +96,10 @@ export class AuthController {
 
   @ApiOperation({ summary: '验证密码（锁屏解锁）' })
   @Post('verifyPassword')
-  async verifyPassword(@User() user: CurrentUserType, @Body() dto: VerifyPasswordDto) {
+  async verifyPassword(
+    @User() user: CurrentUserType,
+    @Body() dto: VerifyPasswordDto,
+  ) {
     return await this.authService.verifyPassword(user.id, dto.password);
   }
 }

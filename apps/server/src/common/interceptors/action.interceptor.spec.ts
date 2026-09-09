@@ -1,5 +1,5 @@
 import { ActionInterceptor } from '@/common/interceptors/action.interceptor';
-import { ExecutionContext, CallHandler } from '@nestjs/common';
+import { CallHandler, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from 'nestjs-prisma';
 import { of, throwError } from 'rxjs';
@@ -41,7 +41,10 @@ describe('ActionInterceptor', () => {
     prisma = {
       sysActionLog: { create: jest.fn().mockResolvedValue(undefined) },
     };
-    interceptor = new ActionInterceptor(reflector, prisma as unknown as PrismaService);
+    interceptor = new ActionInterceptor(
+      reflector,
+      prisma as unknown as PrismaService,
+    );
   });
 
   it('should pass through without logging when no @Action() decorator', (done) => {

@@ -1,3 +1,6 @@
+jest.mock('@prisma/client', () => ({ Prisma: {} }));
+jest.mock('nestjs-prisma', () => ({ PrismaService: class PrismaService {} }));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'nestjs-prisma';
 import { FileUploadService } from './file-upload.service';
@@ -93,7 +96,7 @@ describe('FileUploadService', () => {
         mimetype: 'image/png',
         size: 1024,
       } as Express.Multer.File;
-      const user = { nickName: 'admin' } as any;
+      const user = { id: 'user-1', nickName: 'admin' } as any;
 
       const uploadResult = {
         name: 'test.png',
@@ -105,7 +108,11 @@ describe('FileUploadService', () => {
       };
       storeMock.upload.mockResolvedValue(uploadResult);
 
-      const created = { id: 'mock-uuid-1234', ...uploadResult, createBy: 'admin' };
+      const created = {
+        id: 'mock-uuid-1234',
+        ...uploadResult,
+        createBy: 'admin',
+      };
       prisma.fileUpload.create.mockResolvedValue(created);
 
       const result = await service.create(file, user);
@@ -116,6 +123,7 @@ describe('FileUploadService', () => {
           id: 'mock-uuid-1234',
           ...uploadResult,
           createBy: 'admin',
+          createById: 'user-1',
         },
       });
       expect(result).toEqual(created);

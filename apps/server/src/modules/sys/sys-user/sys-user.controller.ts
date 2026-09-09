@@ -1,8 +1,8 @@
+import type { ExportColumn } from '@/common/class/export.class';
+import { ExcelExportService } from '@/common/class/export.class';
 import { Action } from '@/common/decorators/action.decorator';
 import { Permission } from '@/common/decorators/permission.decorator';
 import { User } from '@/common/decorators/user.decorator';
-import { ExcelExportService } from '@/common/class/export.class';
-import type { ExportColumn } from '@/common/class/export.class';
 import { ActionEnum } from '@/common/enums/action.enum';
 import { CreateDtoPipe } from '@/common/pipes/createDto.pipe';
 import { UpdateDtoPipe } from '@/common/pipes/updateDto.pipe';
@@ -44,7 +44,10 @@ export class SysUserController {
   @Permission('sys:user:create')
   @Action({ title: '新增用户', action: ActionEnum.CREATE })
   @Post()
-  create(@Body(CreateDtoPipe) createSysUserDto: CreateSysUserDto, @User() user: CurrentUserType) {
+  create(
+    @Body(CreateDtoPipe) createSysUserDto: CreateSysUserDto,
+    @User() user: CurrentUserType,
+  ) {
     return this.sysUserService.create(createSysUserDto, user);
   }
 
@@ -76,16 +79,16 @@ export class SysUserController {
     summary: '获取用户选项列表',
   })
   @Get('options')
-  getOptions() {
-    return this.sysUserService.getOptions();
+  getOptions(@User() user: CurrentUserType) {
+    return this.sysUserService.getOptions(user);
   }
 
   @ApiOperation({
     summary: '获取全量用户列表（含部门）',
   })
   @Get('all-with-dept')
-  listAllWithDept() {
-    return this.sysUserService.listAllWithDept();
+  listAllWithDept(@User() user: CurrentUserType) {
+    return this.sysUserService.listAllWithDept(user);
   }
 
   @ApiOperation({
@@ -123,8 +126,8 @@ export class SysUserController {
   })
   @Permission('sys:user:detail')
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.sysUserService.findOne(id);
+  findOne(@Param('id') id: string, @User() user: CurrentUserType) {
+    return this.sysUserService.findOne(id, user);
   }
 
   @ApiOperation({
@@ -148,6 +151,6 @@ export class SysUserController {
   @Permission('sys:user:remove')
   @Delete(':id')
   remove(@Param('id') id: string, @User() user: CurrentUserType) {
-    return this.sysUserService.remove(id, user.id);
+    return this.sysUserService.remove(id, user);
   }
 }

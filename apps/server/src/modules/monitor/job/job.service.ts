@@ -1,11 +1,12 @@
-import { generateUUid } from '@/utils/util';
 import { ApiException } from '@/common/exceptions/api.exception';
+import type { CurrentUserType } from '@/common/types/auth.type';
+import { generateUUid } from '@/utils/util';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from 'nestjs-prisma';
 import { CronJob } from 'cron';
+import { PrismaService } from 'nestjs-prisma';
 import { CreateJobDto, GetJobListDto, UpdateJobDto } from './dto/req-job.dto';
 import { JobLogService } from './job-log.service';
 
@@ -31,7 +32,9 @@ export class JobService implements OnModuleInit {
       try {
         this.addCronJob(job.id, job.cronExpression, job);
       } catch (e) {
-        this.logger.error(`启动加载任务失败 [${job.jobName}]: ${(e as Error).message}`);
+        this.logger.error(
+          `启动加载任务失败 [${job.jobName}]: ${(e as Error).message}`,
+        );
       }
     }
     this.logger.log(`已加载 ${jobs.length} 个定时任务`);
@@ -53,7 +56,12 @@ export class JobService implements OnModuleInit {
     }
 
     const [list, total] = await Promise.all([
-      this.prisma.sysJob.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } }),
+      this.prisma.sysJob.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+      }),
       this.prisma.sysJob.count({ where }),
     ]);
 
@@ -66,10 +74,10 @@ export class JobService implements OnModuleInit {
   }
 
   /* 创建任务 */
-  async create(dto: CreateJobDto) {
+  async create(dto: CreateJobDto, currentUser: CurrentUserType) {
     const id = generateUUid();
     const job = await this.prisma.sysJob.create({
-      data: { id, ...dto },
+      data: { id, ...dto, createById: currentUser.id },
     });
 
     // 启用状态的任务注册 cron
@@ -164,8 +172,12 @@ export class JobService implements OnModuleInit {
     this.runningJobs.add(job.id);
 
     try {
-      const { serviceName, methodName, args } = this.parseInvokeTarget(job.invokeTarget);
-      const serviceInstance = this.moduleRef.get(serviceName, { strict: false });
+      const { serviceName, methodName, args } = this.parseInvokeTarget(
+        job.invokeTarget,
+      );
+      const serviceInstance = this.moduleRef.get(serviceName, {
+        strict: false,
+      });
       const method = serviceInstance[methodName];
 
       if (!method || typeof method !== 'function') {
@@ -217,7 +229,9 @@ export class JobService implements OnModuleInit {
   } {
     const match = target.match(/^(\w+)\.(\w+)\((.*)?\)$/);
     if (!match) {
-      throw new ApiException('任务目标格式错误，正确格式: service.method(args)');
+      throw new ApiException(
+        '任务目标格式错误，正确格式: service.method(args)',
+      );
     }
     return {
       serviceName: match[1],
@@ -230,7 +244,13 @@ export class JobService implements OnModuleInit {
   private addCronJob(
     jobId: string,
     cronExpression: string,
-    job: { id: string; jobName: string; jobGroup: string; invokeTarget: string; concurrent: string },
+    job: {
+      id: string;
+      jobName: string;
+      jobGroup: string;
+      invokeTarget: string;
+      concurrent: string;
+    },
   ) {
     // 先移除旧的（如果存在）
     this.deleteCronJob(jobId);

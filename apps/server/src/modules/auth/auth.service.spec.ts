@@ -1,15 +1,18 @@
-import { ApiException } from '@/common/exceptions/api.exception';
-import type { CurrentUserType, DataScopeWhere, JwtPayloadType } from '@/common/types/auth.type';
+jest.mock('@prisma/client', () => ({ Prisma: {} }));
+jest.mock('nestjs-prisma', () => ({ PrismaService: class PrismaService {} }));
+
+import { DataScopeEnum } from '@/common/enums/dataScope.enum';
+import type { CurrentUserType, JwtPayloadType } from '@/common/types/auth.type';
 import { JwtConfigType } from '@/common/types/config.type';
+import { SysLoginLogService } from '@/modules/sys/sys-login-log/sys-login-log.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from 'nestjs-prisma';
-import { AuthService } from './auth.service';
-import { SysLoginLogService } from '@/modules/sys/sys-login-log/sys-login-log.service';
 import * as svgCaptcha from 'svg-captcha';
+import { AuthService } from './auth.service';
 
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
@@ -37,12 +40,20 @@ jest.mock('svg-captcha', () => ({
 type MockMethod = jest.Mock;
 
 interface MockPrisma {
-  sysUser: { findFirst: MockMethod; findUnique: MockMethod; update: MockMethod };
+  sysUser: {
+    findFirst: MockMethod;
+    findUnique: MockMethod;
+    update: MockMethod;
+  };
   sysRole: { findMany: MockMethod; findFirst: MockMethod };
   sysMenu: { findMany: MockMethod };
   sysMenuBtn: { findMany: MockMethod };
   sysDept: { findMany: MockMethod };
-  sysPasswordHistory: { findMany: MockMethod; create: MockMethod; deleteMany: MockMethod };
+  sysPasswordHistory: {
+    findMany: MockMethod;
+    create: MockMethod;
+    deleteMany: MockMethod;
+  };
   $transaction: MockMethod;
 }
 
@@ -68,17 +79,25 @@ describe('AuthService', () => {
     nickName: 'Test User',
     permissions: ['sys:user:list'],
     isSuper: false,
-    dataScope: {} as DataScopeWhere,
+    dataScope: { scope: DataScopeEnum.SELF, deptIds: [] },
   } as CurrentUserType;
 
   beforeEach(async () => {
     prismaMock = {
-      sysUser: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+      sysUser: {
+        findFirst: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
       sysRole: { findMany: jest.fn(), findFirst: jest.fn() },
       sysMenu: { findMany: jest.fn() },
       sysMenuBtn: { findMany: jest.fn() },
       sysDept: { findMany: jest.fn() },
-      sysPasswordHistory: { findMany: jest.fn(), create: jest.fn(), deleteMany: jest.fn() },
+      sysPasswordHistory: {
+        findMany: jest.fn(),
+        create: jest.fn(),
+        deleteMany: jest.fn(),
+      },
       $transaction: jest.fn((fn) => fn(prismaMock)),
     };
 
@@ -94,10 +113,14 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: {
-            sign: jest.fn().mockImplementation((payload: JwtPayloadType & { type?: string }) => {
-              if (payload?.type === 'refresh') return 'mock-refresh-token';
-              return 'mock-access-token';
-            }),
+            sign: jest
+              .fn()
+              .mockImplementation(
+                (payload: JwtPayloadType & { type?: string }) => {
+                  if (payload?.type === 'refresh') return 'mock-refresh-token';
+                  return 'mock-access-token';
+                },
+              ),
             verify: jest.fn(),
           },
         },
@@ -119,18 +142,25 @@ describe('AuthService', () => {
   /**
    * 设置 validateUser 前置条件（账号未锁定 + 密码校验通过）
    */
-  const setupValidAuth = (overrides: { expireDays?: number; passwordUpdatedAt?: Date | null } = {}) => {
+  const setupValidAuth = (
+    overrides: { expireDays?: number; passwordUpdatedAt?: Date | null } = {},
+  ) => {
     const expireDays = overrides.expireDays ?? 90;
-    const passwordUpdatedAt = overrides.passwordUpdatedAt !== undefined
-      ? overrides.passwordUpdatedAt
-      : new Date('2026-01-01');
+    const passwordUpdatedAt =
+      overrides.passwordUpdatedAt !== undefined
+        ? overrides.passwordUpdatedAt
+        : new Date('2026-01-01');
 
     configService.get.mockImplementation((key: string) => {
       const map: Record<string, number | JwtConfigType> = {
         LOGIN_MAX_FAIL_COUNT: 5,
         LOGIN_LOCK_MINUTES: 30,
         PASSWORD_EXPIRE_DAYS: expireDays,
-        jwt: { secret: 'test-secret', accessTokenExpiresIn: 7200, refreshTokenExpiresIn: 604800 },
+        jwt: {
+          secret: 'test-secret',
+          accessTokenExpiresIn: 7200,
+          refreshTokenExpiresIn: 604800,
+        },
       };
       return map[key];
     });
@@ -138,7 +168,10 @@ describe('AuthService', () => {
     cacheManager.get.mockResolvedValue(0);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-    const user = { ...mockDbUser, passwordUpdatedAt: passwordUpdatedAt as Date };
+    const user = {
+      ...mockDbUser,
+      passwordUpdatedAt: passwordUpdatedAt as Date,
+    };
     prismaMock.sysUser.findFirst.mockResolvedValue(user);
 
     jest.spyOn(service, 'getCurrentUser').mockResolvedValue(mockCurrentUser);
@@ -153,7 +186,10 @@ describe('AuthService', () => {
       const result = await service.validateUser('testuser', 'password123');
 
       expect(result).toEqual(mockCurrentUser);
-      expect((result as CurrentUserType & { mustChangePassword?: boolean }).mustChangePassword).toBeUndefined();
+      expect(
+        (result as CurrentUserType & { mustChangePassword?: boolean })
+          .mustChangePassword,
+      ).toBeUndefined();
     });
 
     it('密码已过期 → 返回 mustChangePassword: true', async () => {
@@ -163,7 +199,10 @@ describe('AuthService', () => {
 
       const result = await service.validateUser('testuser', 'password123');
 
-      expect((result as CurrentUserType & { mustChangePassword?: boolean }).mustChangePassword).toBe(true);
+      expect(
+        (result as CurrentUserType & { mustChangePassword?: boolean })
+          .mustChangePassword,
+      ).toBe(true);
     });
 
     it('PASSWORD_EXPIRE_DAYS=0 → 不检查过期，即使密码很旧也正常返回', async () => {
@@ -173,7 +212,10 @@ describe('AuthService', () => {
       const result = await service.validateUser('testuser', 'password123');
 
       expect(result).toEqual(mockCurrentUser);
-      expect((result as CurrentUserType & { mustChangePassword?: boolean }).mustChangePassword).toBeUndefined();
+      expect(
+        (result as CurrentUserType & { mustChangePassword?: boolean })
+          .mustChangePassword,
+      ).toBeUndefined();
     });
 
     it('passwordUpdatedAt 为 null → 不检查过期', async () => {
@@ -182,7 +224,10 @@ describe('AuthService', () => {
       const result = await service.validateUser('testuser', 'password123');
 
       expect(result).toEqual(mockCurrentUser);
-      expect((result as CurrentUserType & { mustChangePassword?: boolean }).mustChangePassword).toBeUndefined();
+      expect(
+        (result as CurrentUserType & { mustChangePassword?: boolean })
+          .mustChangePassword,
+      ).toBeUndefined();
     });
   });
 
@@ -219,7 +264,10 @@ describe('AuthService', () => {
 
       // sign 被调用两次：access + refresh
       expect(jwtService.sign).toHaveBeenCalledTimes(2);
-      expect(jwtService.sign).toHaveBeenCalledWith({ id: 'user-1' }, { expiresIn: 7200 });
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        { id: 'user-1' },
+        { expiresIn: 7200 },
+      );
       expect(jwtService.sign).toHaveBeenCalledWith(
         { id: 'user-1', type: 'refresh' },
         { expiresIn: 604800 },
@@ -280,7 +328,10 @@ describe('AuthService', () => {
       const result = await service.refreshToken('mock-refresh-token');
 
       expect(result).toHaveProperty('accessToken', 'mock-access-token');
-      expect(jwtService.sign).toHaveBeenCalledWith({ id: 'user-1' }, { expiresIn: 7200 });
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        { id: 'user-1' },
+        { expiresIn: 7200 },
+      );
       expect(cacheManager.set).toHaveBeenCalledWith(
         expect.stringContaining('user:token:'),
         'mock-access-token',
@@ -348,12 +399,19 @@ describe('AuthService', () => {
     it('mustChangePassword=true → 返回 mustChangePassword: true（优先于天数检查）', async () => {
       // 密码没有过期（刚更新），但布尔字段为 true
       setupValidAuth({ passwordUpdatedAt: new Date() });
-      const user = { ...mockDbUser, mustChangePassword: true, passwordUpdatedAt: new Date() };
+      const user = {
+        ...mockDbUser,
+        mustChangePassword: true,
+        passwordUpdatedAt: new Date(),
+      };
       prismaMock.sysUser.findFirst.mockResolvedValue(user);
 
       const result = await service.validateUser('testuser', 'password123');
 
-      expect((result as CurrentUserType & { mustChangePassword?: boolean }).mustChangePassword).toBe(true);
+      expect(
+        (result as CurrentUserType & { mustChangePassword?: boolean })
+          .mustChangePassword,
+      ).toBe(true);
     });
   });
 
@@ -366,7 +424,11 @@ describe('AuthService', () => {
           PASSWORD_HISTORY_COUNT: 3,
           LOGIN_MAX_FAIL_COUNT: 5,
           LOGIN_LOCK_MINUTES: 30,
-          jwt: { secret: 'test-secret', accessTokenExpiresIn: 7200, refreshTokenExpiresIn: 604800 },
+          jwt: {
+            secret: 'test-secret',
+            accessTokenExpiresIn: 7200,
+            refreshTokenExpiresIn: 604800,
+          },
         };
         return map[key];
       });
@@ -378,7 +440,11 @@ describe('AuthService', () => {
       cacheManager.get.mockResolvedValue(5); // 已达最大失败次数
 
       await expect(
-        service.changeExpiredPassword({ userId: 'user-1', oldPassword: '123456', newPassword: 'newPass1' }),
+        service.changeExpiredPassword({
+          userId: 'user-1',
+          oldPassword: '123456',
+          newPassword: 'newPass1',
+        }),
       ).rejects.toThrow('密码错误次数过多');
     });
 
@@ -387,7 +453,11 @@ describe('AuthService', () => {
       prismaMock.sysUser.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.changeExpiredPassword({ userId: 'nonexistent', oldPassword: '123456', newPassword: 'newPass1' }),
+        service.changeExpiredPassword({
+          userId: 'nonexistent',
+          oldPassword: '123456',
+          newPassword: 'newPass1',
+        }),
       ).rejects.toThrow('用户不存在');
     });
 
@@ -397,7 +467,11 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
 
       await expect(
-        service.changeExpiredPassword({ userId: 'user-1', oldPassword: 'wrong', newPassword: 'newPass1' }),
+        service.changeExpiredPassword({
+          userId: 'user-1',
+          oldPassword: 'wrong',
+          newPassword: 'newPass1',
+        }),
       ).rejects.toThrow('旧密码错误，还剩 4 次尝试机会');
       expect(cacheManager.set).toHaveBeenCalled();
     });
@@ -412,7 +486,11 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true); // 新密码与历史重复
 
       await expect(
-        service.changeExpiredPassword({ userId: 'user-1', oldPassword: '123456', newPassword: 'reused1' }),
+        service.changeExpiredPassword({
+          userId: 'user-1',
+          oldPassword: '123456',
+          newPassword: 'reused1',
+        }),
       ).rejects.toThrow('新密码不能与最近 3 次使用过的密码相同');
     });
 
@@ -423,7 +501,10 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true); // 旧密码正确
       prismaMock.sysPasswordHistory.findMany.mockResolvedValue([]);
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false); // 新密码不与历史重复
-      prismaMock.sysUser.update.mockResolvedValue({ ...dbUser, mustChangePassword: false });
+      prismaMock.sysUser.update.mockResolvedValue({
+        ...dbUser,
+        mustChangePassword: false,
+      });
       jest.spyOn(service, 'getCurrentUser').mockResolvedValue(mockCurrentUser);
       jest.spyOn(service, 'getRoutes').mockResolvedValue([]);
 

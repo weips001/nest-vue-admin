@@ -4,7 +4,11 @@ import * as svgCaptcha from 'svg-captcha';
 
 import { REDIS_KEYS } from '@/common/constants/redisKey.constant';
 import { ApiException } from '@/common/exceptions/api.exception';
-import { CurrentUserType, DataScopeWhere, JwtPayloadType } from '@/common/types/auth.type';
+import {
+  CurrentUserType,
+  DataScopeContext,
+  JwtPayloadType,
+} from '@/common/types/auth.type';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -47,7 +51,9 @@ export class AuthService {
     const payload: JwtPayloadType = { id: user.id };
     const jwtConfig = this.configService.get<JwtConfigType>('jwt')!;
 
-    const accessToken = this.jwtService.sign(payload, { expiresIn: jwtConfig.accessTokenExpiresIn });
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: jwtConfig.accessTokenExpiresIn,
+    });
     const refreshToken = this.jwtService.sign(
       { ...payload, type: 'refresh' },
       { expiresIn: jwtConfig.refreshTokenExpiresIn },
@@ -107,7 +113,9 @@ export class AuthService {
   }
 
   async validateUser(userName: string, password: string) {
-    const maxFailCount = this.configService.get<number>('LOGIN_MAX_FAIL_COUNT')!;
+    const maxFailCount = this.configService.get<number>(
+      'LOGIN_MAX_FAIL_COUNT',
+    )!;
     const lockMinutes = this.configService.get<number>('LOGIN_LOCK_MINUTES')!;
     const lockTtl = lockMinutes * 60 * 1000;
 
@@ -115,7 +123,9 @@ export class AuthService {
     const failKey = generateRedisKey(REDIS_KEYS.LOGIN_FAIL, userName);
     const failCount = await this.cacheManager.get<number>(failKey);
     if (failCount && failCount >= maxFailCount) {
-      throw new ApiException(`密码错误次数过多，账号已锁定 ${lockMinutes} 分钟`);
+      throw new ApiException(
+        `密码错误次数过多，账号已锁定 ${lockMinutes} 分钟`,
+      );
     }
 
     // 2. 校验用户是否存在
@@ -134,9 +144,15 @@ export class AuthService {
     // 3. 校验密码
     const isok = await bcrypt.compare(password, user.password);
     if (!isok) {
-      const remaining = await this.recordLoginFail(userName, maxFailCount, lockTtl);
+      const remaining = await this.recordLoginFail(
+        userName,
+        maxFailCount,
+        lockTtl,
+      );
       if (remaining <= 0) {
-        throw new ApiException(`密码错误次数过多，账号已锁定 ${lockMinutes} 分钟`);
+        throw new ApiException(
+          `密码错误次数过多，账号已锁定 ${lockMinutes} 分钟`,
+        );
       }
       throw new ApiException(`用户名或密码错误，还剩 ${remaining} 次尝试机会`);
     }
@@ -153,7 +169,9 @@ export class AuthService {
     // 6. 检查密码是否过期
     const expireDays = this.configService.get<number>('PASSWORD_EXPIRE_DAYS')!;
     if (expireDays > 0 && user.passwordUpdatedAt) {
-      const expiresAt = new Date(user.passwordUpdatedAt.getTime() + expireDays * 24 * 60 * 60 * 1000);
+      const expiresAt = new Date(
+        user.passwordUpdatedAt.getTime() + expireDays * 24 * 60 * 60 * 1000,
+      );
       if (new Date() > expiresAt) {
         const currentUser = await this.getCurrentUser(user.id);
         return { ...currentUser, mustChangePassword: true };
@@ -164,7 +182,11 @@ export class AuthService {
   }
 
   /** 记录一次登录失败，返回剩余尝试次数 */
-  private async recordLoginFail(userName: string, maxFailCount: number, lockTtl: number): Promise<number> {
+  private async recordLoginFail(
+    userName: string,
+    maxFailCount: number,
+    lockTtl: number,
+  ): Promise<number> {
     const failKey = generateRedisKey(REDIS_KEYS.LOGIN_FAIL, userName);
     const current = (await this.cacheManager.get<number>(failKey)) || 0;
     const newCount = current + 1;
@@ -341,8 +363,6 @@ export class AuthService {
     }
     // 解析数据权限
     const dataScope = await this.resolveDataScope(
-      id,
-      user.userName,
       user.deptId,
       roleIds,
       isSuper,
@@ -364,19 +384,17 @@ export class AuthService {
   }
 
   /**
-   * 解析数据权限为 Prisma where 条件
+   * 解析数据权限上下文
    * 权限优先级: ALL > CUSTOM > DEPT_AND_CHILD > DEPT > SELF
    */
   private async resolveDataScope(
-    userId: string,
-    userName: string,
     userDeptId: string | null,
     roleIds: string[],
     isSuper: boolean,
-  ): Promise<DataScopeWhere> {
-    if (isSuper) return {};
+  ): Promise<DataScopeContext> {
+    if (isSuper) return { scope: DataScopeEnum.ALL, deptIds: [] };
 
-    if (!roleIds.length) return { createBy: userName };
+    if (!roleIds.length) return { scope: DataScopeEnum.SELF, deptIds: [] };
 
     const roles = await this.prisma.sysRole.findMany({
       where: { id: { in: roleIds } },
@@ -404,19 +422,18 @@ export class AuthService {
 
     switch (maxScope) {
       case DataScopeEnum.ALL:
-        return {};
+        return { scope: DataScopeEnum.ALL, deptIds: [] };
 
       case DataScopeEnum.CUSTOM: {
         const allCustomRoleDeptIds = roles
           .filter((r) => r.dataScope === DataScopeEnum.CUSTOM)
           .flatMap((r) => r.depts.map((d) => d.id));
         const uniqueDeptIds = [...new Set(allCustomRoleDeptIds)];
-        if (!uniqueDeptIds.length) return { createBy: userName };
-        return { deptId: { in: uniqueDeptIds } };
+        return { scope: DataScopeEnum.CUSTOM, deptIds: uniqueDeptIds };
       }
 
       case DataScopeEnum.DEPT_AND_CHILD: {
-        if (!userDeptId) return { createBy: userName };
+        if (!userDeptId) return { scope: DataScopeEnum.SELF, deptIds: [] };
         // 利用 ancestors 字段一次性查出所有子部门
         const childDepts = await this.prisma.sysDept.findMany({
           where: {
@@ -431,18 +448,18 @@ export class AuthService {
           select: { id: true },
         });
         const deptIds = childDepts.map((d) => d.id);
-        if (!deptIds.length) return { createBy: userName };
-        return { deptId: { in: deptIds } };
+        if (!deptIds.length) return { scope: DataScopeEnum.SELF, deptIds: [] };
+        return { scope: DataScopeEnum.DEPT_AND_CHILD, deptIds };
       }
 
       case DataScopeEnum.DEPT: {
-        if (!userDeptId) return { createBy: userName };
-        return { deptId: { in: [userDeptId] } };
+        if (!userDeptId) return { scope: DataScopeEnum.SELF, deptIds: [] };
+        return { scope: DataScopeEnum.DEPT, deptIds: [userDeptId] };
       }
 
       case DataScopeEnum.SELF:
       default:
-        return { createBy: userName };
+        return { scope: DataScopeEnum.SELF, deptIds: [] };
     }
   }
 
@@ -509,19 +526,30 @@ export class AuthService {
   }
 
   /** 过期/强制改密用户修改密码（无需 JWT） */
-  async changeExpiredPassword(dto: { userId: string; oldPassword: string; newPassword: string }) {
-    const maxFailCount = this.configService.get<number>('LOGIN_MAX_FAIL_COUNT')!;
+  async changeExpiredPassword(dto: {
+    userId: string;
+    oldPassword: string;
+    newPassword: string;
+  }) {
+    const maxFailCount = this.configService.get<number>(
+      'LOGIN_MAX_FAIL_COUNT',
+    )!;
     const lockMinutes = this.configService.get<number>('LOGIN_LOCK_MINUTES')!;
     const lockTtl = lockMinutes * 60 * 1000;
 
     // 1. 检查是否已被锁定
-    const failKey = generateRedisKey(REDIS_KEYS.LOGIN_FAIL, `cpw:${dto.userId}`);
+    const failKey = generateRedisKey(
+      REDIS_KEYS.LOGIN_FAIL,
+      `cpw:${dto.userId}`,
+    );
     const failCount = await this.cacheManager.get<number>(failKey);
     if (failCount && failCount >= maxFailCount) {
       throw new ApiException(`密码错误次数过多，请 ${lockMinutes} 分钟后再试`);
     }
 
-    const user = await this.prisma.sysUser.findUnique({ where: { id: dto.userId } });
+    const user = await this.prisma.sysUser.findUnique({
+      where: { id: dto.userId },
+    });
     if (!user) throw new ApiException('用户不存在');
 
     // 2. 校验旧密码
@@ -532,7 +560,9 @@ export class AuthService {
       await this.cacheManager.set(failKey, newCount, lockTtl);
       const remaining = Math.max(0, maxFailCount - newCount);
       if (remaining <= 0) {
-        throw new ApiException(`密码错误次数过多，请 ${lockMinutes} 分钟后再试`);
+        throw new ApiException(
+          `密码错误次数过多，请 ${lockMinutes} 分钟后再试`,
+        );
       }
       throw new ApiException(`旧密码错误，还剩 ${remaining} 次尝试机会`);
     }
@@ -541,7 +571,9 @@ export class AuthService {
     await this.cacheManager.del(failKey);
 
     // 密码历史检查
-    const historyCount = this.configService.get<number>('PASSWORD_HISTORY_COUNT')!;
+    const historyCount = this.configService.get<number>(
+      'PASSWORD_HISTORY_COUNT',
+    )!;
     if (historyCount > 0) {
       const histories = await this.prisma.sysPasswordHistory.findMany({
         where: { userId: dto.userId },
@@ -552,7 +584,9 @@ export class AuthService {
       for (const h of histories) {
         const reused = await bcrypt.compare(dto.newPassword, h.passwordHash);
         if (reused) {
-          throw new ApiException(`新密码不能与最近 ${historyCount} 次使用过的密码相同`);
+          throw new ApiException(
+            `新密码不能与最近 ${historyCount} 次使用过的密码相同`,
+          );
         }
       }
     }
@@ -597,7 +631,9 @@ export class AuthService {
     const payload: JwtPayloadType = { id: currentUser.id };
     const jwtConfig = this.configService.get<JwtConfigType>('jwt')!;
 
-    const accessToken = this.jwtService.sign(payload, { expiresIn: jwtConfig.accessTokenExpiresIn });
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: jwtConfig.accessTokenExpiresIn,
+    });
     const refreshToken = this.jwtService.sign(
       { ...payload, type: 'refresh' },
       { expiresIn: jwtConfig.refreshTokenExpiresIn },

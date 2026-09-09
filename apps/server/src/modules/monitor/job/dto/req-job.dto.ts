@@ -1,6 +1,13 @@
 import { PaginationDto } from '@/common/dtos/pagination.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 /* 分页查询任务列表 */
 export class GetJobListDto extends PaginationDto {
@@ -47,7 +54,9 @@ export class CreateJobDto {
   @MaxLength(50)
   cronExpression: string;
 
-  @ApiPropertyOptional({ description: '执行策略 (1立即执行 2执行一次 3放弃执行)' })
+  @ApiPropertyOptional({
+    description: '执行策略 (1立即执行 2执行一次 3放弃执行)',
+  })
   @IsString()
   @IsOptional()
   @IsIn(['1', '2', '3'])
@@ -98,7 +107,9 @@ export class UpdateJobDto {
   @MaxLength(50)
   cronExpression: string;
 
-  @ApiPropertyOptional({ description: '执行策略 (1立即执行 2执行一次 3放弃执行)' })
+  @ApiPropertyOptional({
+    description: '执行策略 (1立即执行 2执行一次 3放弃执行)',
+  })
   @IsString()
   @IsOptional()
   @IsIn(['1', '2', '3'])

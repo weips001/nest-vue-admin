@@ -21,7 +21,10 @@ export class SysRoleService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async create(createSysRoleDto: CreateSysRoleDto, currentUser: CurrentUserType) {
+  async create(
+    createSysRoleDto: CreateSysRoleDto,
+    currentUser: CurrentUserType,
+  ) {
     // 非超管不能创建超管角色
     if (createSysRoleDto.isSuper && !currentUser.isSuper) {
       throw new ApiException('只有超级管理员才能创建超管角色');
@@ -162,7 +165,11 @@ export class SysRoleService {
     }
   }
 
-  async update(id: string, updateSysRoleDto: UpdateSysRoleDto, currentUser: CurrentUserType) {
+  async update(
+    id: string,
+    updateSysRoleDto: UpdateSysRoleDto,
+    currentUser: CurrentUserType,
+  ) {
     const exist = await this.prisma.sysRole.findFirst({
       where: {
         key: updateSysRoleDto.key,
@@ -255,8 +262,14 @@ export class SysRoleService {
     return { userIds: role.users.map((u) => u.id) };
   }
 
-  async updateRoleUsers(roleId: string, dto: UpdateRoleUsersDto, currentUser: CurrentUserType) {
-    const targetRole = await this.prisma.sysRole.findUnique({ where: { id: roleId } });
+  async updateRoleUsers(
+    roleId: string,
+    dto: UpdateRoleUsersDto,
+    currentUser: CurrentUserType,
+  ) {
+    const targetRole = await this.prisma.sysRole.findUnique({
+      where: { id: roleId },
+    });
     if (!targetRole) {
       throw new ApiException('角色不存在');
     }
@@ -285,11 +298,12 @@ export class SysRoleService {
       where: { roles: { some: { id: roleId } } },
       select: { id: true },
     });
-    const allUserIds = new Set([...oldUsers.map((u) => u.id), ...newUsers.map((u) => u.id)]);
+    const allUserIds = new Set([
+      ...oldUsers.map((u) => u.id),
+      ...newUsers.map((u) => u.id),
+    ]);
     for (const uid of allUserIds) {
-      await this.cacheManager.del(
-        generateRedisKey(REDIS_KEYS.USER_INFO, uid),
-      );
+      await this.cacheManager.del(generateRedisKey(REDIS_KEYS.USER_INFO, uid));
     }
   }
 }

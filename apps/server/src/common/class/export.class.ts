@@ -19,7 +19,7 @@ export interface ExportColumn {
 
 export interface ExportOptions {
   columns: ExportColumn[];
-  data: Record<string, unknown>[];
+  data: object[];
   filename?: string;
 }
 

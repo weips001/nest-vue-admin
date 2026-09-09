@@ -6,7 +6,6 @@ import { PrismaService } from 'nestjs-prisma';
 import {
   CreateSysNoticeDto,
   GetSysNoticeListDto,
-  GetUserNoticeListDto,
   UpdateSysNoticeDto,
 } from './dto/req-sys-notice.dto';
 
@@ -60,6 +59,7 @@ export class SysNoticeService {
         ...createSysNoticeDto,
         id: generateUUid(),
         createBy: userId,
+        createById: userId,
       },
     });
   }
@@ -130,7 +130,10 @@ export class SysNoticeService {
   }
 
   /* 获取当前用户的通知列表 */
-  async getUserNotices(userId: string, query: { skip?: number; take?: number; isRead?: boolean }) {
+  async getUserNotices(
+    userId: string,
+    query: { skip?: number; take?: number; isRead?: boolean },
+  ) {
     const { skip = 0, take = 20, isRead } = query;
 
     // 获取所有正常状态的通知

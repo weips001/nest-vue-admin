@@ -44,7 +44,10 @@ export class CreateSysRoleDto {
   @MaxLength(1)
   status: string;
 
-  @ApiProperty({ description: '数据权限范围 (ALL/CUSTOM/DEPT/DEPT_AND_CHILD/SELF)', required: true })
+  @ApiProperty({
+    description: '数据权限范围 (ALL/CUSTOM/DEPT/DEPT_AND_CHILD/SELF)',
+    required: true,
+  })
   @IsString()
   @MaxLength(20)
   dataScope: string;

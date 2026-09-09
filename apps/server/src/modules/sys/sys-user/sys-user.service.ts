@@ -1,7 +1,9 @@
-import { REDIS_KEYS } from '@/common/constants/redisKey.constant';
 import type { ExportColumn } from '@/common/class/export.class';
 import { ExcelExportService } from '@/common/class/export.class';
+import { REDIS_KEYS } from '@/common/constants/redisKey.constant';
 import { ApiException } from '@/common/exceptions/api.exception';
+import { DataScopeService } from '@/common/services/data-scope.service';
+import type { CurrentUserType } from '@/common/types/auth.type';
 import { generateRedisKey, generateUUid } from '@/utils/util';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
@@ -17,7 +19,6 @@ import {
   UpdateProfileDto,
   UpdateSysUserDto,
 } from './dto/req-sys-user.dto';
-import type { CurrentUserType } from '@/common/types/auth.type';
 
 @Injectable()
 export class SysUserService {
@@ -26,8 +27,12 @@ export class SysUserService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly excelExportService: ExcelExportService,
     private readonly configService: ConfigService,
+    private readonly dataScopeService: DataScopeService,
   ) {}
-  async create(createSysUserDto: CreateSysUserDto, currentUser: CurrentUserType) {
+  async create(
+    createSysUserDto: CreateSysUserDto,
+    currentUser: CurrentUserType,
+  ) {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.sysUser.findFirst({
         where: {
@@ -54,6 +59,7 @@ export class SysUserService {
         data: {
           ...other,
           id: userId,
+          createById: currentUser.id,
           password,
           mustChangePassword: true,
           roles: {
@@ -78,36 +84,37 @@ export class SysUserService {
 
   async findAll(query: GetSysUserListDto, currentUser: CurrentUserType) {
     const { skip, take } = query;
-    const where: Prisma.SysUserWhereInput = {};
+    const queryWhere: Prisma.SysUserWhereInput = {};
     if (query.userName) {
-      where.userName = {
+      queryWhere.userName = {
         contains: query.userName,
       };
     }
     if (query.phone) {
-      where.phone = {
+      queryWhere.phone = {
         contains: query.phone,
       };
     }
     if (query.status) {
-      where.status = query.status;
+      queryWhere.status = query.status;
     }
     if (query.deptId) {
       // 如果 includeChildren 为 true，查询该部门及其所有子部门的用户
       if (query.includeChildren) {
         // 获取所有子部门 ID
         const childDeptIds = await this.getAllChildDeptIds(query.deptId);
-        where.deptId = { in: [query.deptId, ...childDeptIds] };
+        queryWhere.deptId = { in: [query.deptId, ...childDeptIds] };
       } else {
-        where.deptId = query.deptId;
+        queryWhere.deptId = query.deptId;
       }
     }
     if (query.postId) {
-      where.postId = query.postId;
+      queryWhere.postId = query.postId;
     }
 
-    // 数据权限：直接合并已解析的 where 条件
-    Object.assign(where, currentUser.dataScope);
+    const where = {
+      AND: [queryWhere, this.dataScopeService.buildWhere(currentUser)],
+    };
 
     const listPromise = this.prisma.sysUser.findMany({
       where,
@@ -150,7 +157,10 @@ export class SysUserService {
     res: Response,
   ) {
     const { skip, take, ...whereQuery } = query;
-    const { list } = await this.findAll({ ...whereQuery } as GetSysUserListDto, currentUser);
+    const { list } = await this.findAll(
+      { ...whereQuery } as GetSysUserListDto,
+      currentUser,
+    );
 
     const buffer = await this.excelExportService.export({
       columns: fields,
@@ -183,10 +193,10 @@ export class SysUserService {
     return ids;
   }
 
-  async findOne(id: string) {
-    const user = await this.prisma.sysUser.findUnique({
+  async findOne(id: string, currentUser: CurrentUserType) {
+    const user = await this.prisma.sysUser.findFirst({
       where: {
-        id,
+        AND: [{ id }, this.dataScopeService.buildWhere(currentUser)],
       },
       include: {
         roles: true,
@@ -211,9 +221,22 @@ export class SysUserService {
     };
   }
 
-  async update(id: string, updateSysUserDto: UpdateSysUserDto, currentUser: CurrentUserType) {
+  async update(
+    id: string,
+    updateSysUserDto: UpdateSysUserDto,
+    currentUser: CurrentUserType,
+  ) {
     const { roleIds, ...other } = updateSysUserDto;
     const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.sysUser.findFirst({
+        where: {
+          AND: [{ id }, this.dataScopeService.buildWhere(currentUser)],
+        },
+      });
+      if (!user) {
+        throw new ApiException('用户不存在');
+      }
+
       const exist = await tx.sysUser.findFirst({
         where: {
           userName: updateSysUserDto.userName,
@@ -254,10 +277,13 @@ export class SysUserService {
   }
 
   /* 获取用户选项列表（用于下拉选择） */
-  async getOptions() {
+  async getOptions(currentUser: CurrentUserType) {
     const users = await this.prisma.sysUser.findMany({
       where: {
-        status: '0', // 只返回启用状态的用户
+        AND: [
+          { status: '0' }, // 只返回启用状态的用户
+          this.dataScopeService.buildWhere(currentUser),
+        ],
       },
       select: {
         id: true,
@@ -275,10 +301,10 @@ export class SysUserService {
   }
 
   /* 获取全量用户列表（含部门信息，用于角色分配等场景） */
-  async listAllWithDept() {
+  async listAllWithDept(currentUser: CurrentUserType) {
     return this.prisma.sysUser.findMany({
       where: {
-        status: '0',
+        AND: [{ status: '0' }, this.dataScopeService.buildWhere(currentUser)],
       },
       select: {
         id: true,
@@ -295,15 +321,17 @@ export class SysUserService {
     });
   }
 
-  async remove(id: string, currentUserId: string) {
+  async remove(id: string, currentUser: CurrentUserType) {
     const result = await this.prisma.$transaction(async (tx) => {
       // 不能删除自己
-      if (id === currentUserId) {
+      if (id === currentUser.id) {
         throw new ApiException('不能删除自己');
       }
 
-      const user = await tx.sysUser.findUnique({
-        where: { id },
+      const user = await tx.sysUser.findFirst({
+        where: {
+          AND: [{ id }, this.dataScopeService.buildWhere(currentUser)],
+        },
       });
 
       if (!user) {
@@ -397,10 +425,15 @@ export class SysUserService {
     }
 
     const salt = await bcrypt.genSalt();
-    const newPasswordHash = await bcrypt.hash(updatePasswordDto.newPassword, salt);
+    const newPasswordHash = await bcrypt.hash(
+      updatePasswordDto.newPassword,
+      salt,
+    );
 
     // 检查密码历史
-    const historyCount = this.configService.get<number>('PASSWORD_HISTORY_COUNT')!;
+    const historyCount = this.configService.get<number>(
+      'PASSWORD_HISTORY_COUNT',
+    )!;
     if (historyCount > 0) {
       const histories = await this.prisma.sysPasswordHistory.findMany({
         where: { userId },
@@ -409,9 +442,14 @@ export class SysUserService {
         select: { passwordHash: true },
       });
       for (const h of histories) {
-        const reused = await bcrypt.compare(updatePasswordDto.newPassword, h.passwordHash);
+        const reused = await bcrypt.compare(
+          updatePasswordDto.newPassword,
+          h.passwordHash,
+        );
         if (reused) {
-          throw new ApiException(`新密码不能与最近 ${historyCount} 次使用过的密码相同`);
+          throw new ApiException(
+            `新密码不能与最近 ${historyCount} 次使用过的密码相同`,
+          );
         }
       }
     }

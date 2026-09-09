@@ -40,7 +40,10 @@ export class SysNoticeController {
 
   @ApiOperation({ summary: '获取当前用户的通知列表' })
   @Get('user/list')
-  getUserNotices(@User() user: CurrentUserType, @Query() query: GetUserNoticeListDto) {
+  getUserNotices(
+    @User() user: CurrentUserType,
+    @Query() query: GetUserNoticeListDto,
+  ) {
     return this.sysNoticeService.getUserNotices(user.id, query);
   }
 

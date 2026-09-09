@@ -1,7 +1,6 @@
 import { NoPermissionException } from '@/common/exceptions/noPermission.exception';
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSION_KEY } from '../constants/decorator.constant';
 import { SUPER_ADMIN } from '../constants/base.constant';
 import { PermissionGuard } from './permission.guard';
 
@@ -32,18 +31,14 @@ describe('PermissionGuard', () => {
   });
 
   it('should return true when user has super admin permission', () => {
-    jest
-      .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue('sys:user:add');
+    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue('sys:user:add');
     const context = createMockContext({ permissions: [SUPER_ADMIN] });
 
     expect(guard.canActivate(context)).toBe(true);
   });
 
   it('should return true when user has the required permission', () => {
-    jest
-      .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue('sys:user:add');
+    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue('sys:user:add');
     const context = createMockContext({ permissions: ['sys:user:add'] });
 
     expect(guard.canActivate(context)).toBe(true);
@@ -60,9 +55,7 @@ describe('PermissionGuard', () => {
   });
 
   it('should throw NoPermissionException when user has no permissions array', () => {
-    jest
-      .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue('sys:user:add');
+    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue('sys:user:add');
     const context = createMockContext({ permissions: undefined });
 
     expect(() => guard.canActivate(context)).toThrow(NoPermissionException);

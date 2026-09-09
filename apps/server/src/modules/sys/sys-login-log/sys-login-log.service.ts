@@ -1,8 +1,8 @@
-import { getIpLocation, getRequestIp, generateRedisKey } from '@/utils/util';
 import type { ExportColumn } from '@/common/class/export.class';
 import { ExcelExportService } from '@/common/class/export.class';
 import { REDIS_KEYS } from '@/common/constants/redisKey.constant';
 import type { JwtConfigType } from '@/common/types/config.type';
+import { generateRedisKey, getIpLocation, getRequestIp } from '@/utils/util';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,7 +10,10 @@ import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { PrismaService } from 'nestjs-prisma';
 import { UAParser } from 'ua-parser-js';
-import { GetSysLoginLogListDto, GetOnlineUserListDto } from './dto/req-sys-login-log.dto';
+import {
+  GetOnlineUserListDto,
+  GetSysLoginLogListDto,
+} from './dto/req-sys-login-log.dto';
 
 @Injectable()
 export class SysLoginLogService {
@@ -28,7 +31,9 @@ export class SysLoginLogService {
     const { userName } = request.body as { userName?: string };
     const logData = this.parseRequest(request);
     const jwtConfig = this.configService.get<JwtConfigType>('jwt')!;
-    const expireTime = new Date(Date.now() + jwtConfig.refreshTokenExpiresIn * 1000);
+    const expireTime = new Date(
+      Date.now() + jwtConfig.refreshTokenExpiresIn * 1000,
+    );
 
     return this.prisma.sysLoginLog
       .create({
@@ -138,7 +143,9 @@ export class SysLoginLogService {
     res: Response,
   ) {
     const { skip, take, ...whereQuery } = query;
-    const { list } = await this.findAll({ ...whereQuery } as GetSysLoginLogListDto);
+    const { list } = await this.findAll({
+      ...whereQuery,
+    } as GetSysLoginLogListDto);
 
     const buffer = await this.excelExportService.export({
       columns: fields,

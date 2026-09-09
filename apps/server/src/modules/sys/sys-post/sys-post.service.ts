@@ -1,7 +1,9 @@
-import { REDIS_KEYS } from '@/common/constants/redisKey.constant';
 import type { ExportColumn } from '@/common/class/export.class';
 import { ExcelExportService } from '@/common/class/export.class';
+import { REDIS_KEYS } from '@/common/constants/redisKey.constant';
 import { ApiException } from '@/common/exceptions/api.exception';
+import { DataScopeService } from '@/common/services/data-scope.service';
+import type { CurrentUserType } from '@/common/types/auth.type';
 import { generateRedisKey, generateUUid } from '@/utils/util';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
@@ -14,16 +16,25 @@ import {
   UpdateSysPostDto,
 } from './dto/req-sys-post.dto';
 
+type PostPagination = {
+  skip?: number;
+  take?: number;
+};
+
 @Injectable()
 export class SysPostService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly excelExportService: ExcelExportService,
+    private readonly dataScopeService: DataScopeService,
   ) {}
 
   /* 新增 */
-  async create(createSysPostDto: CreateSysPostDto) {
+  async create(
+    createSysPostDto: CreateSysPostDto,
+    currentUser: CurrentUserType,
+  ) {
     const { deptId, roleIds, ...other } = createSysPostDto;
 
     // 校验岗位编码是否已存在
@@ -49,6 +60,7 @@ export class SysPostService {
         ...other,
         id: generateUUid(),
         deptId: deptId || null,
+        createById: currentUser.id,
         ...(roleIds?.length && {
           roles: { connect: roleIds.map((id) => ({ id })) },
         }),
@@ -57,8 +69,11 @@ export class SysPostService {
   }
 
   /* 列表查询 */
-  async findAll(query: GetSysPostListDto) {
-    const { skip, take } = query;
+  private async queryPosts(
+    query: GetSysPostListDto,
+    currentUser: CurrentUserType,
+    pagination: PostPagination = {},
+  ) {
     const where: Prisma.SysPostWhereInput = {};
 
     if (query.name) {
@@ -85,10 +100,13 @@ export class SysPostService {
       where.status = query.status;
     }
 
+    const scopedWhere = {
+      AND: [where, this.dataScopeService.buildWhere(currentUser)],
+    };
+
     const listPromise = this.prisma.sysPost.findMany({
-      where,
-      skip,
-      take,
+      where: scopedWhere,
+      ...pagination,
       orderBy: [
         { dept: { sort: 'asc' } },
         { isLeader: 'desc' },
@@ -104,9 +122,9 @@ export class SysPostService {
       },
     });
 
-    const totalPromise = this.prisma.sysPost.count({ where });
+    const totalPromise = this.prisma.sysPost.count({ where: scopedWhere });
 
-    const [list, total] = await Promise.all([listPromise, totalPromise]);
+    const [list] = await Promise.all([listPromise, totalPromise]);
 
     // 查询每个岗位的用户数量
     const postIds = list.map((item) => item.id);
@@ -120,6 +138,17 @@ export class SysPostService {
     // 当指定部门时：部门岗位只统计该部门用户，通用岗位也只统计该部门用户
     // 当不指定部门时：统计所有用户
     type UserCountResult = { postId: string | null; _count: { id: number } };
+    const groupUsersByPost = async (
+      userWhere: Prisma.SysUserWhereInput,
+    ): Promise<UserCountResult[]> => {
+      const result = await this.prisma.sysUser.groupBy({
+        by: ['postId'],
+        where: userWhere,
+        _count: { id: true },
+      });
+      return result as unknown as UserCountResult[];
+    };
+
     let userCounts: UserCountResult[];
 
     if (query.deptId !== undefined && query.deptId !== '') {
@@ -129,34 +158,24 @@ export class SysPostService {
 
       const [deptCounts, commonCounts] = await Promise.all([
         // 部门岗位：只统计该部门的用户
-        this.prisma.sysUser.groupBy({
-          by: ['postId'],
-          where: { postId: { in: deptPostIds }, deptId: query.deptId },
-          _count: { id: true },
-        }) as unknown as UserCountResult[],
+        groupUsersByPost({
+          postId: { in: deptPostIds },
+          deptId: query.deptId,
+        }),
         // 通用岗位：统计该部门的用户
-        this.prisma.sysUser.groupBy({
-          by: ['postId'],
-          where: { postId: { in: commonPostIds }, deptId: query.deptId },
-          _count: { id: true },
-        }) as unknown as UserCountResult[],
+        groupUsersByPost({
+          postId: { in: commonPostIds },
+          deptId: query.deptId,
+        }),
       ]);
 
       userCounts = [...deptCounts, ...commonCounts];
     } else if (query.deptId === '') {
       // 查询公司通用岗位（deptId=null），统计所有使用该岗位的用户
-      userCounts = (await this.prisma.sysUser.groupBy({
-        by: ['postId'],
-        where: { postId: { in: postIds } },
-        _count: { id: true },
-      })) as unknown as UserCountResult[];
+      userCounts = await groupUsersByPost({ postId: { in: postIds } });
     } else {
       // 不指定部门，统计所有用户
-      userCounts = (await this.prisma.sysUser.groupBy({
-        by: ['postId'],
-        where: { postId: { in: postIds } },
-        _count: { id: true },
-      })) as unknown as UserCountResult[];
+      userCounts = await groupUsersByPost({ postId: { in: postIds } });
     }
 
     const userCountMap = new Map(
@@ -181,10 +200,20 @@ export class SysPostService {
     return { list: listWithCount, total: listWithCount.length };
   }
 
+  /* 列表查询 */
+  async findAll(query: GetSysPostListDto, currentUser: CurrentUserType) {
+    return this.queryPosts(query, currentUser, {
+      skip: query.skip,
+      take: query.take,
+    });
+  }
+
   /* 通过id查询 */
-  async findOne(id: string) {
-    return this.prisma.sysPost.findUnique({
-      where: { id },
+  async findOne(id: string, currentUser: CurrentUserType) {
+    return this.prisma.sysPost.findFirst({
+      where: {
+        AND: [{ id }, this.dataScopeService.buildWhere(currentUser)],
+      },
       include: {
         dept: {
           select: { id: true, deptName: true },
@@ -197,8 +226,21 @@ export class SysPostService {
   }
 
   /* 更新 */
-  async update(id: string, updateSysPostDto: UpdateSysPostDto) {
+  async update(
+    id: string,
+    updateSysPostDto: UpdateSysPostDto,
+    currentUser: CurrentUserType,
+  ) {
     const { deptId, code, roleIds, ...other } = updateSysPostDto;
+
+    const target = await this.prisma.sysPost.findFirst({
+      where: {
+        AND: [{ id }, this.dataScopeService.buildWhere(currentUser)],
+      },
+    });
+    if (!target) {
+      throw new ApiException('岗位不存在');
+    }
 
     // 校验岗位编码是否已存在（排除自己）
     if (code) {
@@ -250,7 +292,16 @@ export class SysPostService {
   }
 
   /* 删除 */
-  async remove(id: string) {
+  async remove(id: string, currentUser: CurrentUserType) {
+    const target = await this.prisma.sysPost.findFirst({
+      where: {
+        AND: [{ id }, this.dataScopeService.buildWhere(currentUser)],
+      },
+    });
+    if (!target) {
+      throw new ApiException('岗位不存在');
+    }
+
     // 检查是否有用户关联
     const userCount = await this.prisma.sysUser.count({
       where: { postId: id },
@@ -266,7 +317,11 @@ export class SysPostService {
   }
 
   /* 批量删除 */
-  async removes(ids: string[]) {
+  async removes(ids: string[], currentUser: CurrentUserType) {
+    const where = {
+      AND: [{ id: { in: ids } }, this.dataScopeService.buildWhere(currentUser)],
+    };
+
     // 检查是否有用户关联
     const userCount = await this.prisma.sysUser.count({
       where: { postId: { in: ids } },
@@ -277,7 +332,7 @@ export class SysPostService {
     }
 
     return this.prisma.sysPost.deleteMany({
-      where: { id: { in: ids } },
+      where,
     });
   }
 
@@ -285,14 +340,14 @@ export class SysPostService {
   async exportExcel(
     fields: ExportColumn[],
     query: GetSysPostListDto,
+    currentUser: CurrentUserType,
     res: Response,
   ) {
-    const { skip, take, ...whereQuery } = query;
-    const { list } = await this.findAll({ ...whereQuery } as GetSysPostListDto);
+    const { list } = await this.queryPosts(query, currentUser);
 
     const buffer = await this.excelExportService.export({
       columns: fields,
-      data: list as unknown as Record<string, unknown>[],
+      data: list,
       filename: '岗位列表',
     });
 
@@ -308,7 +363,7 @@ export class SysPostService {
   }
 
   /* 获取岗位选项列表（用于下拉选择） */
-  async getOptions(deptId?: string) {
+  async getOptions(deptId: string | undefined, currentUser: CurrentUserType) {
     const where: Prisma.SysPostWhereInput = {
       status: '0', // 只返回启用状态的岗位
     };
@@ -322,7 +377,9 @@ export class SysPostService {
     }
 
     const posts = await this.prisma.sysPost.findMany({
-      where,
+      where: {
+        AND: [where, this.dataScopeService.buildWhere(currentUser)],
+      },
       select: {
         id: true,
         name: true,
@@ -345,9 +402,11 @@ export class SysPostService {
   }
 
   /* 获取岗位关联的角色ID列表 */
-  async getPostRoleIds(postId: string) {
-    const post = await this.prisma.sysPost.findUnique({
-      where: { id: postId },
+  async getPostRoleIds(postId: string, currentUser: CurrentUserType) {
+    const post = await this.prisma.sysPost.findFirst({
+      where: {
+        AND: [{ id: postId }, this.dataScopeService.buildWhere(currentUser)],
+      },
       select: {
         roles: { select: { id: true } },
       },

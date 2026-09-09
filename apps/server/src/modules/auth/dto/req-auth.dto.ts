@@ -1,6 +1,12 @@
 import { Trim } from '@/common/decorators/trim';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, Length, Matches, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class ReqAuthDto {}
 export class RefreshTokenDto {
@@ -56,8 +62,11 @@ export class ChangeExpiredPasswordDto {
   @ApiProperty({ description: '新密码（8-20位，字母+数字+特殊字符）' })
   @IsString()
   @Length(8, 20)
-  @Matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{8,20}$/, {
-    message: '新密码必须包含字母、数字和特殊字符，长度8-20位',
-  })
+  @Matches(
+    /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{8,20}$/,
+    {
+      message: '新密码必须包含字母、数字和特殊字符，长度8-20位',
+    },
+  )
   newPassword: string;
 }

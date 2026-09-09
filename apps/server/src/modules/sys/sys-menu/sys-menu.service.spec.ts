@@ -83,7 +83,12 @@ describe('SysMenuService', () => {
         hidden: false,
         sort: 1,
         parentId: 0,
-        meta: { title: '用户管理', keepAlive: true, defaultMenu: false, closeTab: false },
+        meta: {
+          title: '用户管理',
+          keepAlive: true,
+          defaultMenu: false,
+          closeTab: false,
+        },
         menuBtns: [{ name: '新增', auth: 'sys:user:add' }],
         parameters: [{ type: 'query', key: 'id', value: '1' }],
       };
@@ -121,7 +126,12 @@ describe('SysMenuService', () => {
         hidden: false,
         sort: 2,
         parentId: 5,
-        meta: { title: '用户新增', keepAlive: false, defaultMenu: false, closeTab: false },
+        meta: {
+          title: '用户新增',
+          keepAlive: false,
+          defaultMenu: false,
+          closeTab: false,
+        },
         menuBtns: [],
         parameters: [],
       };
@@ -176,7 +186,9 @@ describe('SysMenuService', () => {
       expect(prisma.sysMenu.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: expectedWhere }),
       );
-      expect(prisma.sysMenu.count).toHaveBeenCalledWith({ where: expectedWhere });
+      expect(prisma.sysMenu.count).toHaveBeenCalledWith({
+        where: expectedWhere,
+      });
     });
 
     it('有 status 查询条件时应传入 status 过滤', async () => {
@@ -248,15 +260,23 @@ describe('SysMenuService', () => {
       mockTx.sysMenuBtn.deleteMany.mockResolvedValue({ count: 1 });
       mockTx.sysMenuBtn.update.mockResolvedValue({});
       mockTx.sysMenuBtn.createMany.mockResolvedValue({ count: 1 });
-      mockTx.sysMenu.update.mockResolvedValue({ id: 1, name: 'sys-user-updated' });
+      mockTx.sysMenu.update.mockResolvedValue({
+        id: 1,
+        name: 'sys-user-updated',
+      });
 
       const updateDto = {
         name: 'sys-user-updated',
         parentId: 0,
-        meta: { title: '用户管理V2', keepAlive: true, defaultMenu: false, closeTab: false },
+        meta: {
+          title: '用户管理V2',
+          keepAlive: true,
+          defaultMenu: false,
+          closeTab: false,
+        },
         menuBtns: [
-          { id: 10, name: '编辑', auth: 'sys:user:edit' },   // update
-          { name: '导出', auth: 'sys:user:export' },          // create
+          { id: 10, name: '编辑', auth: 'sys:user:edit' }, // update
+          { name: '导出', auth: 'sys:user:export' }, // create
         ],
         parameters: [{ type: 'query', key: 'status', value: '1' }],
       };
@@ -295,17 +315,27 @@ describe('SysMenuService', () => {
     it('菜单不存在时应抛出 ApiException', async () => {
       prisma.sysMenu.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(999, {} as any)).rejects.toThrow(ApiException);
-      await expect(service.update(999, {} as any)).rejects.toThrow('当前菜单信息不存在');
+      await expect(service.update(999, {} as any)).rejects.toThrow(
+        ApiException,
+      );
+      await expect(service.update(999, {} as any)).rejects.toThrow(
+        '当前菜单信息不存在',
+      );
     });
 
     it('meta 为 undefined 时不应更新 meta', async () => {
       prisma.sysMenu.findUnique.mockResolvedValue({ id: 1 });
-      prisma.$transaction.mockImplementation(async (cb: Function) => cb(mockTx));
+      prisma.$transaction.mockImplementation(async (cb: Function) =>
+        cb(mockTx),
+      );
       mockTx.sysMenuBtn.deleteMany.mockResolvedValue({ count: 0 });
       mockTx.sysMenu.update.mockResolvedValue({ id: 1 });
 
-      await service.update(1, { menuBtns: [], parameters: [], parentId: 0 } as any);
+      await service.update(1, {
+        menuBtns: [],
+        parameters: [],
+        parentId: 0,
+      } as any);
 
       expect(mockTx.sysMenu.update).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -144,7 +144,7 @@ Phase 1/2/3 相互独立可并行，Phase 4 依赖 1+2，Phase 5 依赖 1。
 
 ## 实施约定
 
-- 每个功能严格遵循 CLAUDE.md 中的 TDD 流程：Schema → Red → Green → Refactor
+- 每个功能严格遵循 AGENTS.md 中的 TDD 流程：Schema → Red → Green → Refactor
 - 后端模块路径：`apps/server/src/modules/{module}/`
 - 前端页面路径：`apps/web/src/views/{module}/`
 - 新增 Redis key 统一在 `redisKey.constant.ts` 定义
