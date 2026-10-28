@@ -17,9 +17,10 @@ const mustChangePassword = ref(false)
 const mustChangePasswordUserId = ref('')
 const prefilledOldPassword = ref('')
 
+// 默认填充演示账号
 const loginForm = reactive({
-  userName: '',
-  password: '',
+  userName: 'admin',
+  password: 'Aa123456.+',
   captcha: '',
 })
 
