@@ -101,7 +101,6 @@ const logger = new Logger('CacheModule');
       provide: APP_PIPE,
       useValue: new ValidationPipe({
         whitelist: true,
-        forbidNonWhitelisted: true,
         transform: true,
       }),
     },

@@ -1,9 +1,5 @@
 import { LoginReqDto } from '@/modules/auth/dto/req-auth.dto';
-import {
-  ArgumentMetadata,
-  BadRequestException,
-  ValidationPipe,
-} from '@nestjs/common';
+import { ArgumentMetadata, ValidationPipe } from '@nestjs/common';
 
 describe('CommonModule ValidationPipe', () => {
   const metadata: ArgumentMetadata = {
@@ -12,24 +8,25 @@ describe('CommonModule ValidationPipe', () => {
     data: '',
   };
 
-  it('请求体包含非白名单字段时应直接抛出 400', async () => {
+  it('请求体包含非白名单字段时应静默剥离', async () => {
     const pipe = new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
       transform: true,
     });
 
-    await expect(
-      pipe.transform(
-        {
-          userName: 'admin',
-          password: '123456',
-          captcha: '1',
-          captchaId: 'captcha-id',
-          extraField: 'unexpected',
-        },
-        metadata,
-      ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    const result = await pipe.transform(
+      {
+        userName: 'admin',
+        password: '123456',
+        captcha: '1',
+        captchaId: 'captcha-id',
+        extraField: 'unexpected',
+      },
+      metadata,
+    );
+
+    expect(result).toBeInstanceOf(LoginReqDto);
+    expect(result).not.toHaveProperty('extraField');
+    expect(result.userName).toBe('admin');
   });
 });
